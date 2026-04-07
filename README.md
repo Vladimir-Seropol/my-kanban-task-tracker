@@ -9,6 +9,13 @@
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
 4. Start app with `npm run dev`.
 
+## Security Migration (Auth + RLS owner/team)
+
+For an existing Supabase project, additionally run:
+
+- `supabase-migration-auth-rls-owner-team.sql`
+- `supabase-migration-add-avatars.sql`
+
 If env variables are missing, app startup throws an explicit configuration error.
 
 # React + TypeScript + Vite

@@ -3,15 +3,9 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import styles from "./Task.module.css";
-import { TaskPersonRow } from "./TaskPersonRow";
+import { TaskCardContent } from "./TaskCardContent";
 
 import type { TaskProps } from "../../types/types";
-
-const priorityColors = {
-    низкий: "#4caf50",
-    средний: "#ff9800",
-    высокий: "#f44336",
-};
 
 const TaskComponent = ({ task, index, onOpenEditor }: TaskProps) => {
     const {
@@ -33,55 +27,13 @@ const TaskComponent = ({ task, index, onOpenEditor }: TaskProps) => {
         opacity: isDragging ? 0.5 : 1,
     };
 
-    const formatDate = (date?: string) => {
-        if (!date) return "—";
-        return new Date(date).toLocaleDateString();
-    };
-
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={styles.task}
-            onClick={() => onOpenEditor(task.id)} // 👈 КЛИК ОТКРЫВАЕТ МОДАЛКУ
-        >
-            {/* Drag handle */}
-            <div {...attributes} {...listeners} className={styles.dragHandle}></div>
-
-            {/* TEXT */}
-            <div className={styles.title}>{task.text}</div>
-
-            {/* PRIORITY */}
-            <div className={styles.meta}>
-                <span
-                    className={styles.priority}
-                    style={{ backgroundColor: priorityColors[task.priority] }}
-                >
-                    {task.priority}
-                </span>
-                <span>{formatDate(task.createdAt)}</span>
-            </div>
-
-            {/* USERS */}
-            <div className={styles.users}>
-                <TaskPersonRow role="Исп." name={task.assignee} avatarUrl={task.assigneeAvatarUrl} />
-                <TaskPersonRow role="Реп." name={task.reporter ?? ""} avatarUrl={task.reporterAvatarUrl} />
-            </div>
-
-            {/* EXTRA */}
-            <div className={styles.meta}>
-                <span>{task.epic}</span>
-                <span>{task.source}</span>
-            </div>
-
-            {/* TAGS */}
-            <div className={styles.tags}>
-                {task.tags?.map((tag) => (
-                    <span key={tag} className={styles.tag}>
-                        {tag}
-                    </span>
-                ))}
-            </div>
+        <div ref={setNodeRef} style={style}>
+            <TaskCardContent
+                task={task}
+                onClick={() => onOpenEditor(task.id)}
+                dragHandle={<div {...attributes} {...listeners} className={styles.dragHandle}></div>}
+            />
         </div>
     );
 };

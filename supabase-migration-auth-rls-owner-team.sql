@@ -1,3 +1,5 @@
+-- Run once in Supabase SQL Editor for existing projects.
+
 create table if not exists public.teams (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -13,33 +15,54 @@ create table if not exists public.team_members (
   primary key (team_id, user_id)
 );
 
-create table if not exists public.columns (
-  id text primary key,
-  title text not null,
-  position integer not null default 0,
-  owner_id uuid not null default auth.uid(),
-  team_id uuid references public.teams(id) on delete set null
-);
+alter table public.columns add column if not exists owner_id uuid;
+alter table public.columns add column if not exists team_id uuid;
+alter table public.tasks add column if not exists owner_id uuid;
+alter table public.tasks add column if not exists team_id uuid;
 
-create table if not exists public.tasks (
-  id text primary key,
-  text text not null,
-  column_id text not null references public.columns(id) on delete cascade,
-  order_index integer not null default 0,
-  owner_id uuid not null default auth.uid(),
-  team_id uuid references public.teams(id) on delete set null,
-  assignee text not null default '',
-  reporter text not null default '',
-  assignee_avatar_url text,
-  reporter_avatar_url text,
-  source text not null default '',
-  description text not null default '',
-  epic text not null default '',
-  tags text[] not null default '{}',
-  priority text not null default 'низкий',
-  created_at text not null,
-  due_date text
-);
+alter table public.columns alter column owner_id set default auth.uid();
+alter table public.tasks alter column owner_id set default auth.uid();
+
+do $$
+begin
+  if exists (select 1 from auth.users) then
+    update public.columns
+    set owner_id = (select id from auth.users order by created_at limit 1)
+    where owner_id is null;
+
+    update public.tasks
+    set owner_id = (select id from auth.users order by created_at limit 1)
+    where owner_id is null;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from public.columns where owner_id is null) then
+    alter table public.columns alter column owner_id set not null;
+  end if;
+  if not exists (select 1 from public.tasks where owner_id is null) then
+    alter table public.tasks alter column owner_id set not null;
+  end if;
+end $$;
+
+do $$
+begin
+  begin
+    alter table public.columns
+      add constraint columns_team_id_fkey
+      foreign key (team_id) references public.teams(id) on delete set null;
+  exception when duplicate_object then
+    null;
+  end;
+  begin
+    alter table public.tasks
+      add constraint tasks_team_id_fkey
+      foreign key (team_id) references public.teams(id) on delete set null;
+  exception when duplicate_object then
+    null;
+  end;
+end $$;
 
 create index if not exists idx_tasks_column_order on public.tasks(column_id, order_index);
 create index if not exists idx_columns_owner_id on public.columns(owner_id);
@@ -52,6 +75,11 @@ alter table public.columns enable row level security;
 alter table public.tasks enable row level security;
 alter table public.teams enable row level security;
 alter table public.team_members enable row level security;
+
+drop policy if exists "public columns read" on public.columns;
+drop policy if exists "public columns write" on public.columns;
+drop policy if exists "public tasks read" on public.tasks;
+drop policy if exists "public tasks write" on public.tasks;
 
 drop policy if exists "columns_select_owned_or_team" on public.columns;
 drop policy if exists "columns_insert_owned_or_team" on public.columns;

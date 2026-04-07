@@ -1,6 +1,6 @@
 import type { Task } from "../../types/types";
-import { TaskPersonRow } from "./TaskPersonRow";
-import styles from "./TaskOverlay.module.css";
+import { TaskCardContent } from "./TaskCardContent";
+import taskStyles from "./Task.module.css";
 
 type TaskOverlayProps = {
   task?: Task;
@@ -9,43 +9,11 @@ type TaskOverlayProps = {
 export const TaskOverlay = ({ task }: TaskOverlayProps) => {
   if (!task) return null;
 
-  const borderColor =
-    task.priority === "высокий"
-      ? "#ff4d4f"
-      : task.priority === "средний"
-      ? "#faad14"
-      : "#52c41a";
-
   return (
-    <div className={styles.overlay} style={{ borderLeft: `4px solid ${borderColor}` }}>
-      {/* HEADER */}
-      <div className={styles.header}></div>
-      <div className={styles.title}>{task.text}</div>
-
-      {/* DETAILS */}
-      <div className={styles.textSmall}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <TaskPersonRow role="Исп." name={task.assignee} avatarUrl={task.assigneeAvatarUrl} />
-          </div>
-          <div>Источник: {task.source || "-"}</div>
-        </div>
-
-        <div className={styles.description}>Описание: {task.description || "-"}</div>
-        <div>Epic: {task.epic || "-"}</div>
-        <div>Начало: {task.createdAt || "-"}</div>
-      </div>
-
-      {/* TAGS */}
-      {task.tags && task.tags.length > 0 && (
-        <div className={styles.tags}>
-          {task.tags.map((tag) => (
-            <span key={tag} className={styles.tag}>
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
+    <TaskCardContent
+      task={task}
+      className={taskStyles.overlay}
+      dragHandle={<div className={taskStyles.dragHandle}></div>}
+    />
   );
 };

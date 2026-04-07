@@ -5,12 +5,20 @@
   border-radius: 8px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 3px;
   box-sizing: border-box;
   width: 100%;
   overflow: hidden;
   border: 1px solid #eee;
   cursor: pointer;
+}
+
+.overlay {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  cursor: grabbing;
+  max-width: 300px;
+  pointer-events: none;
 }
 
 .header {
@@ -27,13 +35,16 @@
 }
 
 .priority {
+  max-width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: #8c8c8c;
   width: 46px;
   height: 32px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
   font-size: 10px;
   font-weight: 600;
   text-transform: capitalize;
@@ -46,7 +57,7 @@
   font-weight: 600;
   font-size: 14px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -72,9 +83,36 @@
   font-size: 11px;
 }
 
+.date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deadlineDate {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.deadlineOverdue {
+  color: #c62828;
+}
+
+.deadlineToday {
+  color: #ef6c00;
+}
+
+.deadlineUpcoming {
+  color: #2e7d32;
+}
+
+.deadlineNone {
+  color: #616161;
+}
+
 .users {
   display: flex;
-  flex-direction: column;
+  /* flex-direction: column; */
   gap: 3px;
 }
 
@@ -108,6 +146,22 @@
   margin: 0;
 }
 
+.shortDescription {
+  font-size: 14px;
+  font-weight: 400;
+  text-align: start;
+  color: #666;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.shortDescription span {
+  font-weight: 600;
+  color: #666;
+}
+
 .footer {
   display: flex;
   justify-content: space-between;
@@ -127,6 +181,10 @@
   display: flex;
   overflow:auto;
   flex-wrap: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: horizontal;
+  overflow: hidden;
   gap: 4px;
 }
 
@@ -135,4 +193,5 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 10px;
+  display: -webkit-box;
 }

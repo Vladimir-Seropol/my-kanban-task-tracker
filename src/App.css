@@ -1,0 +1,46 @@
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 16px;
+  color: #5b4d75;
+}
+
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.app-auth-floating {
+  position: fixed;
+  top: 8px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #ece8f5;
+  border-radius: 10px;
+  background: rgba(250, 248, 255, 0.94);
+  z-index: 3000;
+}
+
+.app-user-email {
+  font-size: 13px;
+  color: #574a71;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-logout {
+  border: 1px solid #d7d0e7;
+  background: #fff;
+  color: #47395c;
+  border-radius: 8px;
+  font-size: 13px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
