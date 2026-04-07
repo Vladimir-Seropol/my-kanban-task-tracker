@@ -1,0 +1,33 @@
+.header {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 20px;
+  background: var(--bg);
+  padding-top: 20px;
+  z-index: 100;
+  top: 0;
+  width: 100%;
+  max-width: 1920px;
+}
+
+.title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: bold;
+
+}
+
+.columns {
+  display: flex;
+  justify-content: center;
+  margin-top: 75px;
+}
+
+.error {
+  text-align: center;
+  margin-top: 40px;
+}

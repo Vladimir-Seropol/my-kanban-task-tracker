@@ -1,0 +1,24 @@
+@font-face {
+  font-family: "Satoshi";
+  src: url("./Satoshi/Satoshi-Regular.eot"); /* IE9 Compat Modes */
+  src: url("./Satoshi/Satoshi-Regular.eot?#iefix") format("embedded-opentype"), /* IE6-IE8 */
+       url("./Satoshi/Satoshi-Regular.woff2") format("woff2"), /* Super Modern Browsers */
+       url("./Satoshi/Satoshi-Regular.woff") format("woff"), /* Modern Browsers */
+       url("./Satoshi/Satoshi-Regular.ttf") format("truetype"), /* Safari, Android, iOS */
+       url("./Satoshi/Satoshi-Regular.svg#Satoshi") format("svg"); /* Legacy iOS */
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("./Satoshi/Satoshi-Bold.eot");
+  src: url("./Satoshi/Satoshi-Bold.eot?#iefix") format("embedded-opentype"),
+       url("./Satoshi/Satoshi-Bold.woff2") format("woff2"),
+       url("./Satoshi/Satoshi-Bold.woff") format("woff"),
+       url("./Satoshi/Satoshi-Bold.ttf") format("truetype"),
+       url("./Satoshi/Satoshi-Bold.svg#Satoshi") format("svg");
+  font-weight: 700;
+  font-style: normal;
+}
+
