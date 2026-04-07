@@ -3,20 +3,10 @@ import styles from "./TaskModal.module.css";
 import { Button } from "../ui/Button/Button";
 import { TaskPersonRow } from "./TaskPersonRow";
 import { UserAvatar } from "../ui/UserAvatar/UserAvatar";
+import { removeAvatarFromStorage, uploadAvatarToStorage } from "../../lib/avatarStorage";
 import type { Task, TaskModalProps } from "../../types/types";
 
 const MAX_AVATAR_BYTES = 450_000;
-
-const readAvatarDataUrl = (file: File, onDone: (dataUrl: string) => void) => {
-  if (!file.type.startsWith("image/")) return;
-  if (file.size > MAX_AVATAR_BYTES) {
-    window.alert("Файл слишком большой (макс. ~450 КБ).");
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => onDone(reader.result as string);
-  reader.readAsDataURL(file);
-};
 
 const priorityColors: Record<Task["priority"], string> = {
   низкий: "#4caf50",
@@ -65,6 +55,7 @@ export const TaskModal = ({
   );
 
   const [form, setForm] = useState<Task>(defaultTask);
+  const [uploadingAvatar, setUploadingAvatar] = useState<"assignee" | "reporter" | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -104,7 +95,32 @@ export const TaskModal = ({
   };
 
   const canSubmit =
-    form.text.trim().length > 0 && Boolean(form.columnId);
+    form.text.trim().length > 0 && Boolean(form.columnId) && uploadingAvatar === null;
+  const handleAvatarUpload = async (file: File, role: "assignee" | "reporter") => {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > MAX_AVATAR_BYTES) {
+      window.alert("Файл слишком большой (макс. ~450 КБ).");
+      return;
+    }
+
+    setUploadingAvatar(role);
+    try {
+      const prevUrl =
+        role === "assignee" ? form.assigneeAvatarUrl : form.reporterAvatarUrl;
+      const url = await uploadAvatarToStorage(file, role);
+
+      if (role === "assignee") handleChange("assigneeAvatarUrl", url);
+      else handleChange("reporterAvatarUrl", url);
+
+      await removeAvatarFromStorage(prevUrl);
+    } catch (error) {
+      console.error(error);
+      window.alert("Не удалось загрузить фото. Проверьте bucket/policies в Supabase Storage.");
+    } finally {
+      setUploadingAvatar(null);
+    }
+  };
+
 
   const formatDate = (date?: string) =>
     date ? new Date(date).toLocaleDateString() : "—";
@@ -237,21 +253,21 @@ export const TaskModal = ({
                     className={styles.avatarInput}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f)
-                        readAvatarDataUrl(f, (url) =>
-                          handleChange("assigneeAvatarUrl", url)
-                        );
+                      if (f) void handleAvatarUpload(f, "assignee");
                       e.target.value = "";
                     }}
                   />
-                  Фото
+                  {uploadingAvatar === "assignee" ? "Загрузка..." : "Фото"}
                 </label>
                 {form.assigneeAvatarUrl ? (
                   <Button
                     type="button"
                     size="sm"
                     variant="secondary"
-                    onClick={() => handleChange("assigneeAvatarUrl", undefined)}
+                    onClick={async () => {
+                      await removeAvatarFromStorage(form.assigneeAvatarUrl);
+                      handleChange("assigneeAvatarUrl", "");
+                    }}
                   >
                     Сбросить
                   </Button>
@@ -272,21 +288,21 @@ export const TaskModal = ({
                     className={styles.avatarInput}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f)
-                        readAvatarDataUrl(f, (url) =>
-                          handleChange("reporterAvatarUrl", url)
-                        );
+                      if (f) void handleAvatarUpload(f, "reporter");
                       e.target.value = "";
                     }}
                   />
-                  Фото
+                  {uploadingAvatar === "reporter" ? "Загрузка..." : "Фото"}
                 </label>
                 {form.reporterAvatarUrl ? (
                   <Button
                     type="button"
                     size="sm"
                     variant="secondary"
-                    onClick={() => handleChange("reporterAvatarUrl", undefined)}
+                    onClick={async () => {
+                      await removeAvatarFromStorage(form.reporterAvatarUrl);
+                      handleChange("reporterAvatarUrl", "");
+                    }}
                   >
                     Сбросить
                   </Button>

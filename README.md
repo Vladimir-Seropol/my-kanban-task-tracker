@@ -15,6 +15,7 @@ For an existing Supabase project, additionally run:
 
 - `supabase-migration-auth-rls-owner-team.sql`
 - `supabase-migration-add-avatars.sql`
+- `supabase-migration-storage-avatars.sql`
 
 If env variables are missing, app startup throws an explicit configuration error.
 
