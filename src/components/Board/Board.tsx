@@ -235,10 +235,16 @@ export const Board = () => {
                 onTextChange={(text) => setTaskModal((prev) => ({ ...prev, text }))}
                 onColumnChange={(columnId) => setTaskModal((prev) => ({ ...prev, columnId }))}
                 onClose={() => setTaskModal((prev) => ({ ...prev, isOpen: false }))}
-                onSubmit={(task) => {
-                    if (taskModal.taskId) editTask(task.id, { ...task });
-                    else createTask(task);
-                    setTaskModal({ isOpen: false, mode: "create", text: "", columnId: columnOrder[0] ?? "", taskId: null });
+                onDelete={(id) => setDeleteTaskId(id)}
+                onSubmit={async (task) => {
+                    try {
+                        if (taskModal.taskId) await editTask(task.id, { ...task });
+                        else await createTask(task);
+                        setTaskModal({ isOpen: false, mode: "create", text: "", columnId: columnOrder[0] ?? "", taskId: null });
+                    } catch (error) {
+                        console.error(error);
+                        window.alert("Не удалось сохранить задачу. Проверьте, что в Supabase добавлены колонки для аватаров (migration add avatars).");
+                    }
                 }}
             />
         </DndContext>

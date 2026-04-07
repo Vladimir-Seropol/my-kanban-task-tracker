@@ -8,6 +8,8 @@ type TaskRow = {
   order_index: number;
   assignee: string;
   reporter: string;
+  assignee_avatar_url: string | null;
+  reporter_avatar_url: string | null;
   source: string;
   description: string;
   epic: string;
@@ -30,6 +32,8 @@ const mapTaskRowToApi = (row: TaskRow): TaskApi => ({
   order: row.order_index,
   assignee: row.assignee,
   reporter: row.reporter,
+  assigneeAvatarUrl: row.assignee_avatar_url ?? undefined,
+  reporterAvatarUrl: row.reporter_avatar_url ?? undefined,
   source: row.source,
   description: row.description,
   epic: row.epic,
@@ -46,6 +50,8 @@ const mapTaskApiToInsert = (task: TaskApi): TaskRow => ({
   order_index: task.order ?? 0,
   assignee: task.assignee ?? "",
   reporter: task.reporter ?? "",
+  assignee_avatar_url: task.assigneeAvatarUrl ?? null,
+  reporter_avatar_url: task.reporterAvatarUrl ?? null,
   source: task.source ?? "",
   description: task.description ?? "",
   epic: task.epic ?? "",
@@ -62,6 +68,10 @@ const mapTaskApiPatchToUpdate = (data: Partial<TaskApi>): Partial<TaskRow> => {
   if (data.order !== undefined) update.order_index = data.order;
   if (data.assignee !== undefined) update.assignee = data.assignee;
   if (data.reporter !== undefined) update.reporter = data.reporter;
+  if (data.assigneeAvatarUrl !== undefined)
+    update.assignee_avatar_url = data.assigneeAvatarUrl ?? null;
+  if (data.reporterAvatarUrl !== undefined)
+    update.reporter_avatar_url = data.reporterAvatarUrl ?? null;
   if (data.source !== undefined) update.source = data.source;
   if (data.description !== undefined) update.description = data.description;
   if (data.epic !== undefined) update.epic = data.epic;

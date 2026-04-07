@@ -8,6 +8,8 @@ export type TaskApi = {
 
   assignee: string;
   reporter: string;
+  assigneeAvatarUrl?: string;
+  reporterAvatarUrl?: string;
   source: string;
   description: string;
   epic: string;
@@ -27,6 +29,8 @@ export type Task = {
 
   assignee: string;
   reporter?: string;
+  assigneeAvatarUrl?: string;
+  reporterAvatarUrl?: string;
   source?: string;
   description: string;
   epic?: string;
@@ -80,7 +84,7 @@ export type TaskModalProps = BaseModalProps & {
   columnId: string;
   onTextChange: (value: string) => void;
   onColumnChange: (value: string) => void;
-  onSubmit: (updatedTask: Task) => void;
+  onSubmit: (updatedTask: Task) => Promise<void> | void;
 };
 
 export type ConfirmModalProps = BaseModalProps & {

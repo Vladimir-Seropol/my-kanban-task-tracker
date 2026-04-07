@@ -1,7 +1,22 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import styles from "./TaskModal.module.css";
 import { Button } from "../ui/Button/Button";
+import { TaskPersonRow } from "./TaskPersonRow";
+import { UserAvatar } from "../ui/UserAvatar/UserAvatar";
 import type { Task, TaskModalProps } from "../../types/types";
+
+const MAX_AVATAR_BYTES = 450_000;
+
+const readAvatarDataUrl = (file: File, onDone: (dataUrl: string) => void) => {
+  if (!file.type.startsWith("image/")) return;
+  if (file.size > MAX_AVATAR_BYTES) {
+    window.alert("Файл слишком большой (макс. ~450 КБ).");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => onDone(reader.result as string);
+  reader.readAsDataURL(file);
+};
 
 const priorityColors: Record<Task["priority"], string> = {
   низкий: "#4caf50",
@@ -35,6 +50,8 @@ export const TaskModal = ({
       order: task?.order || 0,
       assignee: task?.assignee || "",
       reporter: task?.reporter || "",
+      assigneeAvatarUrl: task?.assigneeAvatarUrl,
+      reporterAvatarUrl: task?.reporterAvatarUrl,
       source: task?.source || "",
       description: task?.description || "",
       createdAt:
@@ -121,8 +138,11 @@ export const TaskModal = ({
               <p><b>ID:</b> {task.id}</p>
               <p><b>Текст:</b> {task.text}</p>
               <p><b>Приоритет:</b> {task.priority}</p>
-              <p><b>Исполнитель:</b> {task.assignee}</p>
-              <p><b>Репортер:</b> {task.reporter}</p>
+              <p><b>Участники</b></p>
+              <div className={styles.viewPeople}>
+                <TaskPersonRow role="Исп." name={task.assignee} avatarUrl={task.assigneeAvatarUrl} />
+                <TaskPersonRow role="Реп." name={task.reporter ?? ""} avatarUrl={task.reporterAvatarUrl} />
+              </div>
               <p><b>Источник:</b> {task.source}</p>
               <p><b>Описание:</b> {task.description}</p>
               <p><b>Создана:</b> {formatDate(task.createdAt)}</p>
@@ -201,19 +221,77 @@ export const TaskModal = ({
               ))}
             </select>
 
-            <div className={styles.flexRow}>
-              <input
-                className={styles.input}
-                value={form.assignee}
-                onChange={(e) => handleChange("assignee", e.target.value)}
-                placeholder="Исполнитель"
-              />
-              <input
-                className={styles.input}
-                value={form.reporter}
-                onChange={(e) => handleChange("reporter", e.target.value)}
-                placeholder="Репортер"
-              />
+            <div className={styles.avatarBlock}>
+              <div className={styles.avatarLine}>
+                <input
+                  className={styles.input}
+                  value={form.assignee}
+                  onChange={(e) => handleChange("assignee", e.target.value)}
+                  placeholder="Исполнитель"
+                />
+                <UserAvatar src={form.assigneeAvatarUrl} alt={form.assignee || "Исполнитель"} />
+                <label className={styles.avatarUpload}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className={styles.avatarInput}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f)
+                        readAvatarDataUrl(f, (url) =>
+                          handleChange("assigneeAvatarUrl", url)
+                        );
+                      e.target.value = "";
+                    }}
+                  />
+                  Фото
+                </label>
+                {form.assigneeAvatarUrl ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleChange("assigneeAvatarUrl", undefined)}
+                  >
+                    Сбросить
+                  </Button>
+                ) : null}
+              </div>
+              <div className={styles.avatarLine}>
+                <input
+                  className={styles.input}
+                  value={form.reporter}
+                  onChange={(e) => handleChange("reporter", e.target.value)}
+                  placeholder="Репортер"
+                />
+                <UserAvatar src={form.reporterAvatarUrl} alt={form.reporter || "Репортер"} />
+                <label className={styles.avatarUpload}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className={styles.avatarInput}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f)
+                        readAvatarDataUrl(f, (url) =>
+                          handleChange("reporterAvatarUrl", url)
+                        );
+                      e.target.value = "";
+                    }}
+                  />
+                  Фото
+                </label>
+                {form.reporterAvatarUrl ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleChange("reporterAvatarUrl", undefined)}
+                  >
+                    Сбросить
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             <input

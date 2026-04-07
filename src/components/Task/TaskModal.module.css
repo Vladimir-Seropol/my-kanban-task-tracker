@@ -66,6 +66,42 @@
   flex-wrap: wrap;
 }
 
+.viewPeople {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.avatarBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.avatarLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.avatarLine .input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.avatarUpload {
+  font-size: 12px;
+  cursor: pointer;
+  color: #1677ff;
+  white-space: nowrap;
+}
+
+.avatarInput {
+  display: none;
+}
+
 .dates {
   display: flex;
   gap: 8px;

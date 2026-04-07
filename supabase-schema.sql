@@ -11,6 +11,8 @@ create table if not exists public.tasks (
   order_index integer not null default 0,
   assignee text not null default '',
   reporter text not null default '',
+  assignee_avatar_url text,
+  reporter_avatar_url text,
   source text not null default '',
   description text not null default '',
   epic text not null default '',

@@ -1,4 +1,5 @@
 import type { Task } from "../../types/types";
+import { TaskPersonRow } from "./TaskPersonRow";
 import styles from "./TaskOverlay.module.css";
 
 type TaskOverlayProps = {
@@ -23,8 +24,10 @@ export const TaskOverlay = ({ task }: TaskOverlayProps) => {
 
       {/* DETAILS */}
       <div className={styles.textSmall}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <div>Исполнитель: {task.assignee || "-"}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <TaskPersonRow role="Исп." name={task.assignee} avatarUrl={task.assigneeAvatarUrl} />
+          </div>
           <div>Источник: {task.source || "-"}</div>
         </div>
 

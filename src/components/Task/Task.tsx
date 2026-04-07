@@ -3,6 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import styles from "./Task.module.css";
+import { TaskPersonRow } from "./TaskPersonRow";
 
 import type { TaskProps } from "../../types/types";
 
@@ -45,9 +46,7 @@ const TaskComponent = ({ task, index, onOpenEditor }: TaskProps) => {
             onClick={() => onOpenEditor(task.id)} // 👈 КЛИК ОТКРЫВАЕТ МОДАЛКУ
         >
             {/* Drag handle */}
-            <div {...attributes} {...listeners} className={styles.dragHandle}>
-                
-            </div>
+            <div {...attributes} {...listeners} className={styles.dragHandle}></div>
 
             {/* TEXT */}
             <div className={styles.title}>{task.text}</div>
@@ -64,9 +63,9 @@ const TaskComponent = ({ task, index, onOpenEditor }: TaskProps) => {
             </div>
 
             {/* USERS */}
-            <div className={styles.meta}>
-                <span>👤 {task.assignee}</span>
-                <span>👤 {task.reporter}</span>
+            <div className={styles.users}>
+                <TaskPersonRow role="Исп." name={task.assignee} avatarUrl={task.assigneeAvatarUrl} />
+                <TaskPersonRow role="Реп." name={task.reporter ?? ""} avatarUrl={task.reporterAvatarUrl} />
             </div>
 
             {/* EXTRA */}

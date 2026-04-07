@@ -64,6 +64,20 @@
   text-overflow: ellipsis;
 }
 
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.users {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .dragHandle{
   cursor: grab;
   width: 100%;
