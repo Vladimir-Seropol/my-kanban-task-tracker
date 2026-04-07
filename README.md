@@ -16,6 +16,13 @@ For an existing Supabase project, additionally run:
 - `supabase-migration-auth-rls-owner-team.sql`
 - `supabase-migration-add-avatars.sql`
 - `supabase-migration-storage-avatars.sql`
+- `supabase-migration-soft-delete.sql`
+
+## Backup and restore
+
+- In board header use `Экспорт JSON` to download a backup.
+- Use `Импорт JSON` to restore from backup file.
+- Import uses soft-delete for current active data and then upserts backup records.
 
 If env variables are missing, app startup throws an explicit configuration error.
 

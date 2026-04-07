@@ -17,12 +17,14 @@ type TaskRow = {
   priority: string;
   created_at: string;
   due_date: string | null;
+  deleted_at: string | null;
 };
 
 type ColumnRow = {
   id: string;
   title: string;
   position: number;
+  deleted_at: string | null;
 };
 
 const mapTaskRowToApi = (row: TaskRow): TaskApi => ({
@@ -59,6 +61,7 @@ const mapTaskApiToInsert = (task: TaskApi): TaskRow => ({
   priority: task.priority,
   created_at: task.createdAt,
   due_date: task.dueDate ?? null,
+  deleted_at: null,
 });
 
 const mapTaskApiPatchToUpdate = (data: Partial<TaskApi>): Partial<TaskRow> => {
@@ -105,6 +108,7 @@ export const fetchTasks = async (): Promise<TaskApi[]> => {
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
+    .is("deleted_at", null)
     .order("order_index", { ascending: true });
 
   if (error) throw error;
@@ -138,7 +142,10 @@ export const updateTaskApi = async (
 };
 
 export const deleteTaskApi = async (taskId: string): Promise<void> => {
-  const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+  const { error } = await supabase
+    .from("tasks")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", taskId);
   if (error) throw error;
 };
 
@@ -147,6 +154,7 @@ export const fetchColumns = async (): Promise<ColumnType[]> => {
   const { data, error } = await supabase
     .from("columns")
     .select("*")
+    .is("deleted_at", null)
     .order("position", { ascending: true });
 
   if (error) throw error;
@@ -182,6 +190,76 @@ export const updateColumnApi = async (
 };
 
 export const deleteColumnApi = async (columnId: string) => {
-  const { error } = await supabase.from("columns").delete().eq("id", columnId);
+  const now = new Date().toISOString();
+  const { error: tasksError } = await supabase
+    .from("tasks")
+    .update({ deleted_at: now })
+    .eq("column_id", columnId)
+    .is("deleted_at", null);
+  if (tasksError) throw tasksError;
+
+  const { error } = await supabase
+    .from("columns")
+    .update({ deleted_at: now })
+    .eq("id", columnId);
   if (error) throw error;
+};
+
+export type BoardExportData = {
+  columns: Array<{ id: string; title: string; position: number }>;
+  tasks: TaskApi[];
+};
+
+export const exportBoardDataApi = async (): Promise<BoardExportData> => {
+  const [columnsRaw, tasks] = await Promise.all([fetchColumns(), fetchTasks()]);
+
+  const columns = columnsRaw.map((col, index) => ({
+    id: col.id,
+    title: col.title,
+    position: index,
+  }));
+
+  return { columns, tasks };
+};
+
+export const importBoardDataApi = async (payload: BoardExportData): Promise<void> => {
+  const now = new Date().toISOString();
+
+  const { error: softDeleteTasksError } = await supabase
+    .from("tasks")
+    .update({ deleted_at: now })
+    .is("deleted_at", null);
+  if (softDeleteTasksError) throw softDeleteTasksError;
+
+  const { error: softDeleteColumnsError } = await supabase
+    .from("columns")
+    .update({ deleted_at: now })
+    .is("deleted_at", null);
+  if (softDeleteColumnsError) throw softDeleteColumnsError;
+
+  const columnsToInsert = payload.columns.map((c) => ({
+    id: c.id,
+    title: c.title,
+    position: c.position,
+    deleted_at: null,
+  }));
+
+  const tasksToInsert = payload.tasks.map((t) => ({
+    ...mapTaskApiToInsert(t),
+    deleted_at: null,
+  }));
+
+  if (columnsToInsert.length > 0) {
+    const { error: columnsUpsertError } = await supabase
+      .from("columns")
+      .upsert(columnsToInsert, { onConflict: "id" });
+    if (columnsUpsertError) throw columnsUpsertError;
+  }
+
+  if (tasksToInsert.length > 0) {
+    const { error: tasksUpsertError } = await supabase
+      .from("tasks")
+      .upsert(tasksToInsert, { onConflict: "id" });
+    if (tasksUpsertError) throw tasksUpsertError;
+  }
 };

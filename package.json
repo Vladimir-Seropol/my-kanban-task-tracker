@@ -5,12 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:legacy": "concurrently \"vite\" \"json-server --watch db.json --port 3001\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
-    "server": "json-server --watch db.json --port 3001",
     "seed:supabase": "node scripts/seed-supabase.mjs"
   },
   "dependencies": {
@@ -31,13 +29,11 @@
     "@types/react-dom": "^18.3.7",
     "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^6.0.1",
-    "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
-    "json-server": "^0.17.4",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
     "vite": "^8.0.1",

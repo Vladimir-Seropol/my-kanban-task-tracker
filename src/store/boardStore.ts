@@ -9,6 +9,9 @@ import {
     createColumnApi,
     updateColumnApi,
     deleteColumnApi,
+    exportBoardDataApi,
+    importBoardDataApi,
+    type BoardExportData,
 } from "../api/api";
 
 export type Column = {
@@ -38,6 +41,8 @@ type BoardState = {
         toColumnId: string;
         toIndex: number;
     }) => Promise<void>;
+    exportBoard: () => Promise<BoardExportData>;
+    importBoard: (payload: BoardExportData) => Promise<void>;
 };
 
 // Маппинг API → UI
@@ -281,5 +286,14 @@ export const useBoardStore = create<BoardState>((set, get) => ({
                 });
             })
         );
-    }
+    },
+
+    exportBoard: async () => {
+        return exportBoardDataApi();
+    },
+
+    importBoard: async (payload) => {
+        await importBoardDataApi(payload);
+        await get().loadBoard();
+    },
 }));

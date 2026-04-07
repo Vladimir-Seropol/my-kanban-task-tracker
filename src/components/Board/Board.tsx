@@ -8,7 +8,8 @@ import {
     type DragStartEvent,
     type DragEndEvent,
 } from "@dnd-kit/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 
 import { Column } from "../Column/Column";
 import { TaskOverlay } from "../../components/Task/TaskOverlay";
@@ -19,13 +20,27 @@ import { BoardSkeleton } from "../ui/BoardSkeleton";
 import { Button } from "../ui/Button/Button";
 import styles from "./Board.module.css";
 
-import type { Task } from "../../types/types";
+import type { Task, TaskApi } from "../../types/types";
 import { useBoardStore } from "../../store/boardStore";
 
 export const Board = () => {
     
     // STORE
-        const { columnOrder, columnsById, tasksById, moveTask, createTask, editTask, deleteTask, createColumn, editColumn, deleteColumn, loadBoard } = useBoardStore();
+        const {
+        columnOrder,
+        columnsById,
+        tasksById,
+        moveTask,
+        createTask,
+        editTask,
+        deleteTask,
+        createColumn,
+        editColumn,
+        deleteColumn,
+        loadBoard,
+        exportBoard,
+        importBoard,
+    } = useBoardStore();
 
     
     // DND
@@ -51,6 +66,7 @@ export const Board = () => {
         editingId: null as string | null,
     });
     const [isBoardLoaded, setIsBoardLoaded] = useState(false);
+    const importInputRef = useRef<HTMLInputElement | null>(null);
 
     
     // EFFECTS
@@ -115,6 +131,56 @@ export const Board = () => {
         setActiveTask(null);
     };
 
+    const handleExportBoard = async () => {
+        try {
+            const payload = await exportBoard();
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `kanban-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error(error);
+            window.alert("Не удалось выполнить экспорт. Проверьте подключение к Supabase.");
+        }
+    };
+
+    const handleImportBoardClick = () => {
+        importInputRef.current?.click();
+    };
+
+    const handleImportBoardFile = async (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const parsed = JSON.parse(text) as {
+                columns?: Array<{ id: string; title: string; position: number }>;
+                tasks?: TaskApi[];
+            };
+
+            if (!parsed.columns || !Array.isArray(parsed.columns) || !parsed.tasks || !Array.isArray(parsed.tasks)) {
+                window.alert("Неверный формат JSON. Ожидаются поля columns[] и tasks[].");
+                return;
+            }
+
+            await importBoard({
+                columns: parsed.columns,
+                tasks: parsed.tasks,
+            });
+
+            window.alert("Импорт завершен.");
+        } catch (error) {
+            console.error(error);
+            window.alert("Не удалось импортировать JSON. Проверьте формат файла.");
+        } finally {
+            event.target.value = "";
+        }
+    };
+
     
     // RENDER
         if (!isBoardLoaded) return <BoardSkeleton />;
@@ -151,6 +217,22 @@ export const Board = () => {
                 >
                     + Добавить колонку
                 </Button>
+
+                <Button variant="secondary" onClick={handleExportBoard}>
+                    Экспорт JSON
+                </Button>
+
+                <Button variant="secondary" onClick={handleImportBoardClick}>
+                    Импорт JSON
+                </Button>
+
+                <input
+                    ref={importInputRef}
+                    type="file"
+                    accept="application/json"
+                    style={{ display: "none" }}
+                    onChange={handleImportBoardFile}
+                />
             </div>
 
             {/* COLUMNS */}
