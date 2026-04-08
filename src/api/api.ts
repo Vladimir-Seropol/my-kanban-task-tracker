@@ -3,6 +3,7 @@ import type {
   TaskApi,
   ColumnType,
   ProjectApi,
+  ProjectMember,
   ProjectRole,
 } from "../types/types";
 
@@ -40,6 +41,13 @@ type ProjectRow = {
 };
 
 type ProjectMemberRow = {
+  project_id: string;
+  user_id: string;
+  role: ProjectRole;
+  created_at: string;
+};
+
+type ProjectMemberRoleRow = {
   role: ProjectRole;
 };
 
@@ -122,15 +130,12 @@ const getNextColumnPosition = async (projectId: string): Promise<number> => {
 
 // TASKS
 export const fetchTasks = async (projectId: string): Promise<TaskApi[]> => {
-  const { data, error } = await supabase
-    .from("tasks")
-    .select("*")
-    .eq("project_id", projectId)
-    .is("deleted_at", null)
-    .order("order_index", { ascending: true });
+  const { data, error } = await supabase.rpc("list_project_tasks", {
+    p_project_id: projectId,
+  });
 
   if (error) throw error;
-  return (data as TaskRow[]).map(mapTaskRowToApi);
+  return ((data ?? []) as TaskRow[]).map(mapTaskRowToApi);
 };
 
 export const createTaskApi = async (
@@ -172,15 +177,12 @@ export const deleteTaskApi = async (taskId: string): Promise<void> => {
 
 // COLUMNS
 export const fetchColumns = async (projectId: string): Promise<ColumnType[]> => {
-  const { data, error } = await supabase
-    .from("columns")
-    .select("*")
-    .eq("project_id", projectId)
-    .is("deleted_at", null)
-    .order("position", { ascending: true });
+  const { data, error } = await supabase.rpc("list_project_columns", {
+    p_project_id: projectId,
+  });
 
   if (error) throw error;
-  return (data as ColumnRow[]).map(mapColumnRowToApi);
+  return ((data ?? []) as ColumnRow[]).map(mapColumnRowToApi);
 };
 
 export const createColumnApi = async (
@@ -303,13 +305,11 @@ export const importBoardDataApi = async (
 };
 
 export const fetchProjectsApi = async (): Promise<ProjectApi[]> => {
-  const { data, error } = await supabase
-    .from("projects")
-    .select("*")
-    .order("created_at", { ascending: true });
+  const { data, error } = await supabase.rpc("list_my_projects");
 
   if (error) throw error;
-  return (data as ProjectRow[]).map(mapProjectRowToApi);
+  const rows = (data ?? []) as ProjectRow[];
+  return rows.map(mapProjectRowToApi);
 };
 
 export const createProjectApi = async (name: string): Promise<ProjectApi> => {
@@ -365,7 +365,7 @@ export const fetchProjectRoleApi = async (
     .select("role")
     .eq("project_id", projectId)
     .eq("user_id", userId)
-    .maybeSingle<ProjectMemberRow>();
+    .maybeSingle<ProjectMemberRoleRow>();
 
   if (memberError) {
     // Backward compatibility before project_members migration is applied.
@@ -374,4 +374,75 @@ export const fetchProjectRoleApi = async (
   }
 
   return membership?.role === "admin" ? "admin" : "member";
+};
+
+const mapProjectMemberRowToApi = (row: ProjectMemberRow): ProjectMember => ({
+  projectId: row.project_id,
+  userId: row.user_id,
+  role: row.role,
+  createdAt: row.created_at,
+});
+
+export const fetchProjectMembersApi = async (
+  projectId: string
+): Promise<ProjectMember[]> => {
+  const { data, error } = await supabase
+    .from("project_members")
+    .select("project_id, user_id, role, created_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data as ProjectMemberRow[]).map(mapProjectMemberRowToApi);
+};
+
+export const addProjectMemberApi = async (
+  projectId: string,
+  userId: string,
+  role: ProjectRole = "member"
+): Promise<void> => {
+  const { error } = await supabase
+    .from("project_members")
+    .upsert(
+      { project_id: projectId, user_id: userId, role },
+      { onConflict: "project_id,user_id" }
+    );
+  if (error) throw error;
+};
+
+export const addProjectMemberByEmailApi = async (
+  projectId: string,
+  email: string,
+  role: ProjectRole = "member"
+): Promise<void> => {
+  const { error } = await supabase.rpc("invite_project_member_by_email", {
+    p_project_id: projectId,
+    p_email: email.trim().toLowerCase(),
+    p_role: role,
+  });
+  if (error) throw error;
+};
+
+export const updateProjectMemberRoleApi = async (
+  projectId: string,
+  userId: string,
+  role: ProjectRole
+): Promise<void> => {
+  const { error } = await supabase
+    .from("project_members")
+    .update({ role })
+    .eq("project_id", projectId)
+    .eq("user_id", userId);
+  if (error) throw error;
+};
+
+export const removeProjectMemberApi = async (
+  projectId: string,
+  userId: string
+): Promise<void> => {
+  const { error } = await supabase
+    .from("project_members")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("user_id", userId);
+  if (error) throw error;
 };

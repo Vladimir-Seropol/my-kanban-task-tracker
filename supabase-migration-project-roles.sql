@@ -80,18 +80,21 @@ for delete using (
   )
 );
 
--- Projects: visible to project members; mutable only by admins
+-- Projects: visible to owner OR project_members (drop legacy policy names from supabase-migration-projects.sql)
+drop policy if exists projects_select_owned_or_member on public.projects;
 drop policy if exists "projects_select_owner_only" on public.projects;
 drop policy if exists "projects_select_member_or_admin" on public.projects;
+drop policy if exists "projects_select_owner_or_member" on public.projects;
 drop policy if exists "projects_insert_owner" on public.projects;
 drop policy if exists "projects_update_owner" on public.projects;
 drop policy if exists "projects_delete_owner" on public.projects;
 drop policy if exists "projects_update_admin" on public.projects;
 drop policy if exists "projects_delete_admin" on public.projects;
 
-create policy "projects_select_member_or_admin" on public.projects
+create policy "projects_select_owner_or_member" on public.projects
 for select using (
-  exists (
+  owner_id = auth.uid()
+  or exists (
     select 1
     from public.project_members pm
     where pm.project_id = projects.id
@@ -250,3 +253,88 @@ for delete using (
       and pm.role = 'admin'
   )
 );
+
+-- Список проектов для сайдбара (SECURITY DEFINER — видимость по owner_id и project_members)
+create or replace function public.list_my_projects()
+returns setof public.projects
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.*
+  from public.projects p
+  where p.owner_id = auth.uid()
+     or exists (
+       select 1
+       from public.project_members pm
+       where pm.project_id = p.id
+         and pm.user_id = auth.uid()
+     )
+  order by p.created_at asc;
+$$;
+
+revoke all on function public.list_my_projects() from public;
+grant execute on function public.list_my_projects() to authenticated;
+
+create or replace function public.list_project_columns(p_project_id uuid)
+returns setof public.columns
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select c.*
+  from public.columns c
+  where c.project_id = p_project_id
+    and c.deleted_at is null
+    and (
+      exists (
+        select 1
+        from public.projects p
+        where p.id = p_project_id
+          and p.owner_id = auth.uid()
+      )
+      or exists (
+        select 1
+        from public.project_members pm
+        where pm.project_id = p_project_id
+          and pm.user_id = auth.uid()
+      )
+    )
+  order by c.position asc;
+$$;
+
+create or replace function public.list_project_tasks(p_project_id uuid)
+returns setof public.tasks
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select t.*
+  from public.tasks t
+  where t.project_id = p_project_id
+    and t.deleted_at is null
+    and (
+      exists (
+        select 1
+        from public.projects p
+        where p.id = p_project_id
+          and p.owner_id = auth.uid()
+      )
+      or exists (
+        select 1
+        from public.project_members pm
+        where pm.project_id = p_project_id
+          and pm.user_id = auth.uid()
+      )
+    )
+  order by t.order_index asc;
+$$;
+
+revoke all on function public.list_project_columns(uuid) from public;
+grant execute on function public.list_project_columns(uuid) to authenticated;
+
+revoke all on function public.list_project_tasks(uuid) from public;
+grant execute on function public.list_project_tasks(uuid) to authenticated;

@@ -6,7 +6,7 @@ import { supabase } from "./lib/supabase";
 import { AppSidebar } from "./components/Sidebar/AppSidebar";
 import { InputModal } from "./components/ui/InputModal/InputModal";
 import type { Session } from "@supabase/supabase-js";
-import type { TaskApi } from "./types/types";
+import type { ProjectRole, TaskApi } from "./types/types";
 import { useBoardStore } from "./store/boardStore";
 import { Toaster, toast } from "sonner";
 import "./App.css";
@@ -23,11 +23,15 @@ export default function App() {
     selectedProjectId,
     projectRole,
     projectPermissions,
+    projectMembers,
     loadProjects,
     selectProject,
     createProject,
     editProject,
     deleteProject,
+    addProjectMemberByEmail,
+    updateProjectMemberRole,
+    removeProjectMember,
     exportBoard,
     importBoard,
   } = useBoardStore();
@@ -178,6 +182,47 @@ export default function App() {
     }
   };
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    const message =
+      (error as { message?: string } | null)?.message ??
+      (error as { error_description?: string } | null)?.error_description;
+    if (message === "FORBIDDEN") return "Недостаточно прав";
+    return fallback;
+  };
+
+  const handleAddProjectMemberByEmail = async (email: string, role: ProjectRole) => {
+    if (!selectedProjectId) return;
+    try {
+      await addProjectMemberByEmail(selectedProjectId, email, role);
+      toast.success("Участник добавлен по email");
+    } catch (error) {
+      console.error(error);
+      toast.error(getErrorMessage(error, "Пользователь с таким email не найден"));
+    }
+  };
+
+  const handleUpdateProjectMemberRole = async (userId: string, role: ProjectRole) => {
+    if (!selectedProjectId) return;
+    try {
+      await updateProjectMemberRole(selectedProjectId, userId, role);
+      toast.success("Роль участника обновлена");
+    } catch (error) {
+      console.error(error);
+      toast.error(getErrorMessage(error, "Не удалось обновить роль"));
+    }
+  };
+
+  const handleRemoveProjectMember = async (userId: string) => {
+    if (!selectedProjectId) return;
+    try {
+      await removeProjectMember(selectedProjectId, userId);
+      toast.success("Участник удален");
+    } catch (error) {
+      console.error(error);
+      toast.error(getErrorMessage(error, "Не удалось удалить участника"));
+    }
+  };
+
   return (
     <div className={`app-shell ${sidebarOpen ? "app-shell--sidebar-open" : ""}`}>
       <Toaster richColors position="top-right" />
@@ -191,6 +236,7 @@ export default function App() {
         selectedProjectId={selectedProjectId}
         projectRole={projectRole}
         canManageProjects={projectPermissions.canManageProjects}
+        members={projectMembers}
         importInputRef={importInputRef}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         onCreateProject={handleCreateProject}
@@ -200,6 +246,9 @@ export default function App() {
         onExportProject={handleExportProject}
         onImportProjectClick={handleImportProjectClick}
         onImportProjectFile={handleImportProjectFile}
+        onAddMemberByEmail={handleAddProjectMemberByEmail}
+        onUpdateMemberRole={handleUpdateProjectMemberRole}
+        onRemoveMember={handleRemoveProjectMember}
       />
 
       <div className="app-main">
@@ -212,6 +261,11 @@ export default function App() {
           </div>
         ) : selectedProjectId ? (
           <Board key={selectedProjectId} projectId={selectedProjectId} />
+        ) : projects.length === 0 ? (
+          <div className="app-empty-board">
+            <p className="app-empty-board__title">Нет проектов</p>
+            <p className="app-empty-board__hint">Создайте проект через кнопку в боковой панели.</p>
+          </div>
         ) : (
           <div className="app-loading">Загрузка проекта...</div>
         )}

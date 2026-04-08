@@ -60,6 +60,13 @@ export type ProjectPermissions = {
   canMoveTasks: boolean;
 };
 
+export type ProjectMember = {
+  projectId: string;
+  userId: string;
+  role: ProjectRole;
+  createdAt: string;
+};
+
 export type ID = string;
 
 export type State = {

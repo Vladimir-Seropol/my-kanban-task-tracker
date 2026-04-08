@@ -3,6 +3,7 @@ import type {
     Task,
     TaskApi,
     ProjectApi,
+    ProjectMember,
     ProjectPermissions,
     ProjectRole,
 } from "../types/types";
@@ -21,6 +22,11 @@ import {
     deleteColumnApi,
     exportBoardDataApi,
     fetchProjectRoleApi,
+    fetchProjectMembersApi,
+    addProjectMemberApi,
+    addProjectMemberByEmailApi,
+    updateProjectMemberRoleApi,
+    removeProjectMemberApi,
     importBoardDataApi,
     type BoardExportData,
 } from "../api/api";
@@ -36,6 +42,7 @@ type BoardState = {
     selectedProjectId: string | null;
     projectRole: ProjectRole;
     projectPermissions: ProjectPermissions;
+    projectMembers: ProjectMember[];
     tasksById: Record<string, Task>;
     columnsById: Record<string, Column>;
     columnOrder: string[];
@@ -43,6 +50,11 @@ type BoardState = {
     loadProjects: () => Promise<void>;
     selectProject: (projectId: string) => void;
     loadProjectRole: (projectId: string) => Promise<void>;
+    loadProjectMembers: (projectId: string) => Promise<void>;
+    addProjectMember: (projectId: string, userId: string, role?: ProjectRole) => Promise<void>;
+    addProjectMemberByEmail: (projectId: string, email: string, role?: ProjectRole) => Promise<void>;
+    updateProjectMemberRole: (projectId: string, userId: string, role: ProjectRole) => Promise<void>;
+    removeProjectMember: (projectId: string, userId: string) => Promise<void>;
     createProject: (name: string) => Promise<void>;
     editProject: (projectId: string, name: string) => Promise<void>;
     deleteProject: (projectId: string) => Promise<void>;
@@ -118,6 +130,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     selectedProjectId: null,
     projectRole: "member",
     projectPermissions: roleToPermissions("member"),
+    projectMembers: [],
     tasksById: {},
     columnsById: {},
     columnOrder: [],
@@ -125,12 +138,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         loadProjects: async () => {
         const projects = await fetchProjectsApi();
         if (projects.length === 0) {
-            const created = await createProjectApi("Мой проект");
             set({
-                projects: [created],
-                selectedProjectId: created.id,
-                projectRole: "admin",
-                projectPermissions: roleToPermissions("admin"),
+                projects: [],
+                selectedProjectId: null,
+                projectRole: "member",
+                projectPermissions: roleToPermissions("member"),
+                projectMembers: [],
+                tasksById: {},
+                columnsById: {},
+                columnOrder: [],
             });
             return;
         }
@@ -143,12 +159,14 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         const selected = get().selectedProjectId ?? projects[0]?.id;
         if (selected) {
             await get().loadProjectRole(selected);
+            await get().loadProjectMembers(selected);
         }
     },
 
     selectProject: (projectId) => {
         set({ selectedProjectId: projectId });
         void get().loadProjectRole(projectId);
+        void get().loadProjectMembers(projectId);
     },
 
     loadProjectRole: async (projectId) => {
@@ -159,8 +177,40 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         });
     },
 
-    createProject: async (name) => {
+    loadProjectMembers: async (projectId) => {
+        const members = await fetchProjectMembersApi(projectId);
+        set({ projectMembers: members });
+    },
+
+    addProjectMember: async (projectId, userId, role = "member") => {
         if (!get().projectPermissions.canManageProjects) throw new Error("FORBIDDEN");
+        await addProjectMemberApi(projectId, userId, role);
+        await get().loadProjectMembers(projectId);
+    },
+
+    addProjectMemberByEmail: async (projectId, email, role = "member") => {
+        if (!get().projectPermissions.canManageProjects) throw new Error("FORBIDDEN");
+        await addProjectMemberByEmailApi(projectId, email, role);
+        await get().loadProjectMembers(projectId);
+    },
+
+    updateProjectMemberRole: async (projectId, userId, role) => {
+        if (!get().projectPermissions.canManageProjects) throw new Error("FORBIDDEN");
+        await updateProjectMemberRoleApi(projectId, userId, role);
+        await get().loadProjectMembers(projectId);
+    },
+
+    removeProjectMember: async (projectId, userId) => {
+        if (!get().projectPermissions.canManageProjects) throw new Error("FORBIDDEN");
+        await removeProjectMemberApi(projectId, userId);
+        await get().loadProjectMembers(projectId);
+    },
+
+    createProject: async (name) => {
+        const state = get();
+        if (!state.projectPermissions.canManageProjects && state.projects.length > 0) {
+            throw new Error("FORBIDDEN");
+        }
         const created = await createProjectApi(name.trim());
         set((state) => ({
             projects: [...state.projects, created],

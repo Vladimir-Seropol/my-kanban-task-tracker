@@ -162,6 +162,61 @@
   background: #efeafd;
 }
 
+.membersBlock {
+  margin-top: 10px;
+  border-top: 1px solid #e9e3f7;
+  padding-top: 10px;
+}
+
+.membersHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #4a3b65;
+  font-weight: 600;
+}
+
+.membersList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memberItem {
+  border: 1px solid #e2dbf1;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 8px;
+}
+
+.memberMain {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.memberId {
+  color: #3f2f66;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberRole {
+  color: #6b5c89;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.memberActions {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+}
+
 .bottom {
   display: flex;
   flex-direction: column;

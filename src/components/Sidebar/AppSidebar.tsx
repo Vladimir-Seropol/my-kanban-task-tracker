@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, RefObject } from "react";
 import { supabase } from "../../lib/supabase";
-import type { ProjectApi, ProjectRole } from "../../types/types";
+import type { ProjectApi, ProjectMember, ProjectRole } from "../../types/types";
 import styles from "./AppSidebar.module.css";
 import { InputModal } from "../ui/InputModal/InputModal";
 import { ConfirmModal } from "../Column/ConfirmModal";
@@ -17,6 +17,7 @@ type AppSidebarProps = {
   selectedProjectId: string | null;
   projectRole: ProjectRole;
   canManageProjects: boolean;
+  members: ProjectMember[];
   importInputRef: RefObject<HTMLInputElement>;
   onToggleSidebar: () => void;
   onCreateProject: () => void;
@@ -26,6 +27,9 @@ type AppSidebarProps = {
   onExportProject: () => void;
   onImportProjectClick: () => void;
   onImportProjectFile: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
+  onAddMemberByEmail: (email: string, role: ProjectRole) => Promise<void>;
+  onUpdateMemberRole: (userId: string, role: ProjectRole) => Promise<void>;
+  onRemoveMember: (userId: string) => Promise<void>;
 };
 
 export const AppSidebar = ({
@@ -38,6 +42,7 @@ export const AppSidebar = ({
   selectedProjectId,
   projectRole,
   canManageProjects,
+  members,
   importInputRef,
   onToggleSidebar,
   onCreateProject,
@@ -47,12 +52,16 @@ export const AppSidebar = ({
   onExportProject,
   onImportProjectClick,
   onImportProjectFile,
+  onAddMemberByEmail,
+  onUpdateMemberRole,
+  onRemoveMember,
 }: AppSidebarProps) => {
   const [currentName, setCurrentName] = useState(userName ?? "");
   const [currentAvatar, setCurrentAvatar] = useState(userAvatarUrl ?? "");
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [projectRenameModalOpen, setProjectRenameModalOpen] = useState(false);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
+  const [memberModalOpen, setMemberModalOpen] = useState(false);
   const profileInputRef = useRef<HTMLInputElement>(null);
   const handleToggleSidebar = onToggleSidebar;
   const displayName = currentName.trim() || userEmail || "Пользователь";
@@ -172,7 +181,12 @@ export const AppSidebar = ({
         <div className={styles.projectsHeader}>
           <span>Проекты</span>
           <div className={styles.projectActions}>
-            <button className={styles.smallBtn} type="button" onClick={onCreateProject} disabled={!canManageProjects}>
+            <button
+              className={styles.smallBtn}
+              type="button"
+              onClick={onCreateProject}
+              disabled={!canManageProjects && projects.length > 0}
+            >
               + Проект
             </button>
             <button
@@ -205,6 +219,58 @@ export const AppSidebar = ({
               {project.name}
             </button>
           ))}
+        </div>
+        <div className={styles.membersBlock}>
+          <div className={styles.membersHeader}>
+            <span>Участники</span>
+            {canManageProjects && (
+              <button
+                className={styles.smallBtn}
+                type="button"
+                disabled={!selectedProjectId}
+                onClick={() => setMemberModalOpen(true)}
+              >
+                + Участник
+              </button>
+            )}
+          </div>
+          <div className={styles.membersList}>
+            {members
+              .filter((member) => member.projectId === selectedProjectId)
+              .map((member) => (
+                <div key={member.userId} className={styles.memberItem}>
+                  <div className={styles.memberMain}>
+                    <span className={styles.memberId}>{member.userId}</span>
+                    <span className={styles.memberRole}>{member.role}</span>
+                  </div>
+                  {canManageProjects && (
+                    <div className={styles.memberActions}>
+                      <button
+                        className={styles.smallBtn}
+                        type="button"
+                        onClick={() => {
+                          void onUpdateMemberRole(
+                            member.userId,
+                            member.role === "admin" ? "member" : "admin"
+                          );
+                        }}
+                      >
+                        {member.role === "admin" ? "В member" : "В admin"}
+                      </button>
+                      <button
+                        className={`${styles.smallBtn} ${styles.smallDanger}`}
+                        type="button"
+                        onClick={() => {
+                          void onRemoveMember(member.userId);
+                        }}
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
         </div>
       </div>
 
@@ -244,6 +310,19 @@ export const AppSidebar = ({
         initialValue={selectedProject?.name ?? ""}
         onClose={() => setProjectRenameModalOpen(false)}
         onConfirm={handleRenameProject}
+      />
+      <InputModal
+        isOpen={memberModalOpen}
+        title="Добавить участника"
+        label="Введите email участника"
+        onClose={() => setMemberModalOpen(false)}
+        onConfirm={async (value) => {
+          const email = value.trim().toLowerCase();
+          if (!email) return;
+          await onAddMemberByEmail(email, "member");
+          setMemberModalOpen(false);
+        }}
+        confirmText="Добавить"
       />
       <ConfirmModal
         isOpen={Boolean(deleteProjectId)}
