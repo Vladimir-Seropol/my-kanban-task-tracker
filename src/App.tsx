@@ -24,6 +24,8 @@ export default function App() {
     loadProjects,
     selectProject,
     createProject,
+    editProject,
+    deleteProject,
     exportBoard,
     importBoard,
   } = useBoardStore();
@@ -86,6 +88,26 @@ export default function App() {
     } catch (error) {
       console.error(error);
       toast.error("Не удалось создать проект");
+    }
+  };
+
+  const handleRenameProjectSubmit = async (projectId: string, nextName: string) => {
+    try {
+      await editProject(projectId, nextName);
+      toast.success("Проект переименован");
+    } catch (error) {
+      console.error(error);
+      toast.error("Не удалось переименовать проект");
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      await deleteProject(projectId);
+      toast.success("Проект удален");
+    } catch (error) {
+      console.error(error);
+      toast.error("Не удалось удалить проект");
     }
   };
 
@@ -168,6 +190,8 @@ export default function App() {
         importInputRef={importInputRef}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         onCreateProject={handleCreateProject}
+        onRenameProject={handleRenameProjectSubmit}
+        onDeleteProject={handleDeleteProject}
         onSelectProject={selectProject}
         onExportProject={handleExportProject}
         onImportProjectClick={handleImportProjectClick}

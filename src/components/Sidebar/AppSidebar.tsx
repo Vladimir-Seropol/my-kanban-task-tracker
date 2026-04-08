@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import type { ProjectApi } from "../../types/types";
 import styles from "./AppSidebar.module.css";
 import { InputModal } from "../ui/InputModal/InputModal";
+import { ConfirmModal } from "../Column/ConfirmModal";
 import { toast } from "sonner";
 
 type AppSidebarProps = {
@@ -17,6 +18,8 @@ type AppSidebarProps = {
   importInputRef: RefObject<HTMLInputElement>;
   onToggleSidebar: () => void;
   onCreateProject: () => void;
+  onRenameProject: (projectId: string, name: string) => Promise<void>;
+  onDeleteProject: (projectId: string) => Promise<void>;
   onSelectProject: (projectId: string) => void;
   onExportProject: () => void;
   onImportProjectClick: () => void;
@@ -34,6 +37,8 @@ export const AppSidebar = ({
   importInputRef,
   onToggleSidebar,
   onCreateProject,
+  onRenameProject,
+  onDeleteProject,
   onSelectProject,
   onExportProject,
   onImportProjectClick,
@@ -42,9 +47,13 @@ export const AppSidebar = ({
   const [currentName, setCurrentName] = useState(userName ?? "");
   const [currentAvatar, setCurrentAvatar] = useState(userAvatarUrl ?? "");
   const [nameModalOpen, setNameModalOpen] = useState(false);
+  const [projectRenameModalOpen, setProjectRenameModalOpen] = useState(false);
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const profileInputRef = useRef<HTMLInputElement>(null);
   const handleToggleSidebar = onToggleSidebar;
   const displayName = currentName.trim() || userEmail || "Пользователь";
+  const selectedProject =
+    projects.find((project) => project.id === selectedProjectId) ?? null;
 
   const handleEditName = async (nextName: string) => {
     const trimmed = nextName.trim();
@@ -100,6 +109,20 @@ export const AppSidebar = ({
     event.target.value = "";
   };
 
+  const handleRenameProject = async (nextName: string) => {
+    if (!selectedProjectId) return;
+    const trimmed = nextName.trim();
+    if (!trimmed) return;
+    await onRenameProject(selectedProjectId, trimmed);
+    setProjectRenameModalOpen(false);
+  };
+
+  const handleDeleteSelectedProject = async () => {
+    if (!deleteProjectId) return;
+    await onDeleteProject(deleteProjectId);
+    setDeleteProjectId(null);
+  };
+
   return (
     <aside className={`${styles.sidebar} ${sidebarOpen ? styles.open : styles.closed}`}>
        <div className={styles.toggleRow}>
@@ -141,9 +164,27 @@ export const AppSidebar = ({
       <div className={styles.center}>
         <div className={styles.projectsHeader}>
           <span>Проекты</span>
-          <button className={styles.smallBtn} type="button" onClick={onCreateProject}>
-            + Проект
-          </button>
+          <div className={styles.projectActions}>
+            <button className={styles.smallBtn} type="button" onClick={onCreateProject}>
+              + Проект
+            </button>
+            <button
+              className={styles.smallBtn}
+              type="button"
+              onClick={() => setProjectRenameModalOpen(true)}
+              disabled={!selectedProjectId}
+            >
+              ✎
+            </button>
+            <button
+              className={`${styles.smallBtn} ${styles.smallDanger}`}
+              type="button"
+              onClick={() => setDeleteProjectId(selectedProjectId)}
+              disabled={!selectedProjectId}
+            >
+              🗑
+            </button>
+          </div>
         </div>
 
         <div className={styles.projectsList}>
@@ -187,6 +228,26 @@ export const AppSidebar = ({
         initialValue={currentName}
         onClose={() => setNameModalOpen(false)}
         onConfirm={handleEditName}
+      />
+      <InputModal
+        isOpen={projectRenameModalOpen}
+        title="Переименовать проект"
+        label="Введите новое название проекта"
+        initialValue={selectedProject?.name ?? ""}
+        onClose={() => setProjectRenameModalOpen(false)}
+        onConfirm={handleRenameProject}
+      />
+      <ConfirmModal
+        isOpen={Boolean(deleteProjectId)}
+        title="Удалить проект?"
+        description={`Проект "${selectedProject?.name ?? ""}" будет удален вместе со всеми задачами и колонками.`}
+        confirmLabel="Удалить"
+        cancelLabel="Отмена"
+        onClose={() => setDeleteProjectId(null)}
+        onConfirm={() => {
+          void handleDeleteSelectedProject();
+        }}
+        variant="danger"
       />
     </aside>
   );

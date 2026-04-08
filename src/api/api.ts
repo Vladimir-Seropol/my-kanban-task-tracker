@@ -312,3 +312,23 @@ export const createProjectApi = async (name: string): Promise<ProjectApi> => {
   if (error) throw error;
   return mapProjectRowToApi(data);
 };
+
+export const updateProjectApi = async (
+  projectId: string,
+  name: string
+): Promise<ProjectApi> => {
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ name })
+    .eq("id", projectId)
+    .select("*")
+    .single<ProjectRow>();
+
+  if (error) throw error;
+  return mapProjectRowToApi(data);
+};
+
+export const deleteProjectApi = async (projectId: string): Promise<void> => {
+  const { error } = await supabase.from("projects").delete().eq("id", projectId);
+  if (error) throw error;
+};

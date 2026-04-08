@@ -5,6 +5,8 @@ import {
     fetchColumns,
     fetchProjectsApi,
     createProjectApi,
+    updateProjectApi,
+    deleteProjectApi,
     createTaskApi,
     updateTaskApi,
     deleteTaskApi,
@@ -34,6 +36,8 @@ type BoardState = {
     loadProjects: () => Promise<void>;
     selectProject: (projectId: string) => void;
     createProject: (name: string) => Promise<void>;
+    editProject: (projectId: string, name: string) => Promise<void>;
+    deleteProject: (projectId: string) => Promise<void>;
     loadBoard: (projectId: string) => Promise<void>;
 
     createTask: (task: Task) => Promise<void>;
@@ -129,6 +133,34 @@ export const useBoardStore = create<BoardState>((set, get) => ({
             projects: [...state.projects, created],
             selectedProjectId: created.id,
         }));
+    },
+
+    editProject: async (projectId, name) => {
+        const updated = await updateProjectApi(projectId, name.trim());
+        set((state) => ({
+            projects: state.projects.map((project) =>
+                project.id === projectId ? updated : project
+            ),
+        }));
+    },
+
+    deleteProject: async (projectId) => {
+        await deleteProjectApi(projectId);
+        set((state) => {
+            const projects = state.projects.filter((project) => project.id !== projectId);
+            const selectedProjectId =
+                state.selectedProjectId === projectId
+                    ? (projects[0]?.id ?? null)
+                    : state.selectedProjectId;
+
+            return {
+                projects,
+                selectedProjectId,
+                ...(state.selectedProjectId === projectId
+                    ? { tasksById: {}, columnsById: {}, columnOrder: [] }
+                    : {}),
+            };
+        });
     },
 
         // LOAD BOARD
