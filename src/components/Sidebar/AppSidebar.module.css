@@ -1,5 +1,5 @@
 .sidebar {
-  margin-top: 85px;
+  margin-top: var(--board-panel-top-offset);
   grid-column: 1;
   position: relative;
   width: 100%;
@@ -12,8 +12,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 100vh;
-  overflow: hidden;
+  min-height: var(--board-column-height);
+  max-height: var(--board-column-height);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .open {
@@ -127,6 +129,8 @@
 .projectsList {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: 6px;
   overflow: auto;
 }
@@ -149,9 +153,14 @@
 .bottom {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
   gap: 8px;
   border-top: 1px solid #e9e3f7;
   padding-top: 10px;
+  padding-bottom: 8px;
+  background: #f8f6ff;
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
@@ -202,4 +211,15 @@
 
 .toggleClosed img {
   transform: rotate(180deg);
+}
+
+.hiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }

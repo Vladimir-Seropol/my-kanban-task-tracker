@@ -1,3 +1,8 @@
+:root {
+  --board-panel-top-offset: 85px;
+  --board-column-height: calc(100vh - 150px);
+}
+
 .app-loading {
   display: flex;
   align-items: center;

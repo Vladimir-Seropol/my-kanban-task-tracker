@@ -202,20 +202,21 @@ export const AppSidebar = ({
       </div>
 
       <div className={styles.bottom}>
+      <button className={`${styles.sidebarBtn} ${styles.danger}`} type="button" onClick={() => supabase.auth.signOut()}>
+          Выйти из аккаунта
+        </button>
         <button className={styles.sidebarBtn} type="button" onClick={onExportProject} disabled={!selectedProjectId}>
           Экспорт JSON
         </button>
         <button className={styles.sidebarBtn} type="button" onClick={onImportProjectClick} disabled={!selectedProjectId}>
           Импорт JSON
         </button>
-        <button className={`${styles.sidebarBtn} ${styles.danger}`} type="button" onClick={() => supabase.auth.signOut()}>
-          Выйти из аккаунта
-        </button>
+
         <input
+          className={styles.hiddenFileInput}
           ref={importInputRef}
           type="file"
           accept="application/json"
-          style={{ display: "none" }}
           onChange={(event) => {
             void onImportProjectFile(event);
           }}
