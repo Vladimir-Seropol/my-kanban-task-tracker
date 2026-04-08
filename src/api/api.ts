@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import type { TaskApi, ColumnType } from "../types/types";
+import type { TaskApi, ColumnType, ProjectApi } from "../types/types";
 
 type TaskRow = {
   id: string;
@@ -18,6 +18,7 @@ type TaskRow = {
   created_at: string;
   due_date: string | null;
   deleted_at: string | null;
+  project_id: string;
 };
 
 type ColumnRow = {
@@ -25,6 +26,13 @@ type ColumnRow = {
   title: string;
   position: number;
   deleted_at: string | null;
+  project_id: string;
+};
+
+type ProjectRow = {
+  id: string;
+  name: string;
+  created_at: string;
 };
 
 const mapTaskRowToApi = (row: TaskRow): TaskApi => ({
@@ -62,6 +70,7 @@ const mapTaskApiToInsert = (task: TaskApi): TaskRow => ({
   created_at: task.createdAt,
   due_date: task.dueDate ?? null,
   deleted_at: null,
+  project_id: "",
 });
 
 const mapTaskApiPatchToUpdate = (data: Partial<TaskApi>): Partial<TaskRow> => {
@@ -91,10 +100,18 @@ const mapColumnRowToApi = (row: ColumnRow): ColumnType => ({
   tasks: [],
 });
 
-const getNextColumnPosition = async (): Promise<number> => {
+const mapProjectRowToApi = (row: ProjectRow): ProjectApi => ({
+  id: row.id,
+  name: row.name,
+  createdAt: row.created_at,
+});
+
+const getNextColumnPosition = async (projectId: string): Promise<number> => {
   const { data, error } = await supabase
     .from("columns")
     .select("position")
+    .eq("project_id", projectId)
+    .is("deleted_at", null)
     .order("position", { ascending: false })
     .limit(1)
     .maybeSingle<{ position: number }>();
@@ -104,10 +121,11 @@ const getNextColumnPosition = async (): Promise<number> => {
 };
 
 // TASKS
-export const fetchTasks = async (): Promise<TaskApi[]> => {
+export const fetchTasks = async (projectId: string): Promise<TaskApi[]> => {
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
+    .eq("project_id", projectId)
     .is("deleted_at", null)
     .order("order_index", { ascending: true });
 
@@ -115,10 +133,13 @@ export const fetchTasks = async (): Promise<TaskApi[]> => {
   return (data as TaskRow[]).map(mapTaskRowToApi);
 };
 
-export const createTaskApi = async (task: TaskApi): Promise<TaskApi> => {
+export const createTaskApi = async (
+  task: TaskApi,
+  projectId: string
+): Promise<TaskApi> => {
   const { data, error } = await supabase
     .from("tasks")
-    .insert(mapTaskApiToInsert(task))
+    .insert({ ...mapTaskApiToInsert(task), project_id: projectId })
     .select("*")
     .single<TaskRow>();
 
@@ -150,10 +171,11 @@ export const deleteTaskApi = async (taskId: string): Promise<void> => {
 };
 
 // COLUMNS
-export const fetchColumns = async (): Promise<ColumnType[]> => {
+export const fetchColumns = async (projectId: string): Promise<ColumnType[]> => {
   const { data, error } = await supabase
     .from("columns")
     .select("*")
+    .eq("project_id", projectId)
     .is("deleted_at", null)
     .order("position", { ascending: true });
 
@@ -161,12 +183,15 @@ export const fetchColumns = async (): Promise<ColumnType[]> => {
   return (data as ColumnRow[]).map(mapColumnRowToApi);
 };
 
-export const createColumnApi = async (column: { id: string; title: string }) => {
-  const position = await getNextColumnPosition();
+export const createColumnApi = async (
+  column: { id: string; title: string },
+  projectId: string
+) => {
+  const position = await getNextColumnPosition(projectId);
 
   const { data, error } = await supabase
     .from("columns")
-    .insert({ id: column.id, title: column.title, position })
+    .insert({ id: column.id, title: column.title, position, project_id: projectId })
     .select("*")
     .single<ColumnRow>();
 
@@ -206,12 +231,18 @@ export const deleteColumnApi = async (columnId: string) => {
 };
 
 export type BoardExportData = {
+  projectId: string;
   columns: Array<{ id: string; title: string; position: number }>;
   tasks: TaskApi[];
 };
 
-export const exportBoardDataApi = async (): Promise<BoardExportData> => {
-  const [columnsRaw, tasks] = await Promise.all([fetchColumns(), fetchTasks()]);
+export const exportBoardDataApi = async (
+  projectId: string
+): Promise<BoardExportData> => {
+  const [columnsRaw, tasks] = await Promise.all([
+    fetchColumns(projectId),
+    fetchTasks(projectId),
+  ]);
 
   const columns = columnsRaw.map((col, index) => ({
     id: col.id,
@@ -219,21 +250,26 @@ export const exportBoardDataApi = async (): Promise<BoardExportData> => {
     position: index,
   }));
 
-  return { columns, tasks };
+  return { projectId, columns, tasks };
 };
 
-export const importBoardDataApi = async (payload: BoardExportData): Promise<void> => {
+export const importBoardDataApi = async (
+  projectId: string,
+  payload: BoardExportData
+): Promise<void> => {
   const now = new Date().toISOString();
 
   const { error: softDeleteTasksError } = await supabase
     .from("tasks")
     .update({ deleted_at: now })
+    .eq("project_id", projectId)
     .is("deleted_at", null);
   if (softDeleteTasksError) throw softDeleteTasksError;
 
   const { error: softDeleteColumnsError } = await supabase
     .from("columns")
     .update({ deleted_at: now })
+    .eq("project_id", projectId)
     .is("deleted_at", null);
   if (softDeleteColumnsError) throw softDeleteColumnsError;
 
@@ -242,11 +278,13 @@ export const importBoardDataApi = async (payload: BoardExportData): Promise<void
     title: c.title,
     position: c.position,
     deleted_at: null,
+    project_id: projectId,
   }));
 
   const tasksToInsert = payload.tasks.map((t) => ({
     ...mapTaskApiToInsert(t),
     deleted_at: null,
+    project_id: projectId,
   }));
 
   if (columnsToInsert.length > 0) {
@@ -262,4 +300,25 @@ export const importBoardDataApi = async (payload: BoardExportData): Promise<void
       .upsert(tasksToInsert, { onConflict: "id" });
     if (tasksUpsertError) throw tasksUpsertError;
   }
+};
+
+export const fetchProjectsApi = async (): Promise<ProjectApi[]> => {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data as ProjectRow[]).map(mapProjectRowToApi);
+};
+
+export const createProjectApi = async (name: string): Promise<ProjectApi> => {
+  const { data, error } = await supabase
+    .from("projects")
+    .insert({ name })
+    .select("*")
+    .single<ProjectRow>();
+
+  if (error) throw error;
+  return mapProjectRowToApi(data);
 };

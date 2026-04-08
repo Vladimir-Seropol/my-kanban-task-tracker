@@ -47,6 +47,12 @@ export type ColumnType = {
   tasks: Task[];
 };
 
+export type ProjectApi = {
+  id: string;
+  name: string;
+  createdAt: string;
+};
+
 export type ID = string;
 
 export type State = {

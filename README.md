@@ -17,6 +17,7 @@ For an existing Supabase project, additionally run:
 - `supabase-migration-add-avatars.sql`
 - `supabase-migration-storage-avatars.sql`
 - `supabase-migration-soft-delete.sql`
+- `supabase-migration-projects.sql`
 
 ## Backup and restore
 

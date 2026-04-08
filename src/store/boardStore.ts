@@ -3,6 +3,8 @@ import type { Task, TaskApi } from "../types/types";
 import {
     fetchTasks,
     fetchColumns,
+    fetchProjectsApi,
+    createProjectApi,
     createTaskApi,
     updateTaskApi,
     deleteTaskApi,
@@ -14,6 +16,7 @@ import {
     type BoardExportData,
 } from "../api/api";
 import { supabase } from "../lib/supabase";
+import type { ProjectApi } from "../types/types";
 
 export type Column = {
     id: string;
@@ -22,11 +25,16 @@ export type Column = {
 };
 
 type BoardState = {
+    projects: ProjectApi[];
+    selectedProjectId: string | null;
     tasksById: Record<string, Task>;
     columnsById: Record<string, Column>;
     columnOrder: string[];
 
-    loadBoard: () => Promise<void>;
+    loadProjects: () => Promise<void>;
+    selectProject: (projectId: string) => void;
+    createProject: (name: string) => Promise<void>;
+    loadBoard: (projectId: string) => Promise<void>;
 
     createTask: (task: Task) => Promise<void>;
     editTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
@@ -95,19 +103,50 @@ const DEFAULT_COLUMNS = [
 let loadBoardInFlight: Promise<void> | null = null;
 
 export const useBoardStore = create<BoardState>((set, get) => ({
+    projects: [],
+    selectedProjectId: null,
     tasksById: {},
     columnsById: {},
     columnOrder: [],
 
+        loadProjects: async () => {
+        const projects = await fetchProjectsApi();
+        if (projects.length === 0) {
+            const created = await createProjectApi("Мой проект");
+            set({ projects: [created], selectedProjectId: created.id });
+            return;
+        }
+
+        set((state) => ({
+            projects,
+            selectedProjectId: state.selectedProjectId ?? projects[0].id,
+        }));
+    },
+
+    selectProject: (projectId) => {
+        set({ selectedProjectId: projectId });
+    },
+
+    createProject: async (name) => {
+        const created = await createProjectApi(name.trim());
+        set((state) => ({
+            projects: [...state.projects, created],
+            selectedProjectId: created.id,
+        }));
+    },
+
         // LOAD BOARD
-        loadBoard: async () => {
+        loadBoard: async (projectId) => {
         if (loadBoardInFlight) {
             await loadBoardInFlight;
             return;
         }
 
         loadBoardInFlight = (async () => {
-            let [tasksApi, columnsApi] = await Promise.all([fetchTasks(), fetchColumns()]);
+            let [tasksApi, columnsApi] = await Promise.all([
+                fetchTasks(projectId),
+                fetchColumns(projectId),
+            ]);
 
             if (columnsApi.length === 0) {
                 const { data: authData } = await supabase.auth.getUser();
@@ -116,14 +155,17 @@ export const useBoardStore = create<BoardState>((set, get) => ({
                 for (const column of DEFAULT_COLUMNS) {
                     const seededId = uid ? `${uid}-${column.key}` : crypto.randomUUID();
                     try {
-                        await createColumnApi({ id: seededId, title: column.title });
+                        await createColumnApi({ id: seededId, title: column.title }, projectId);
                     } catch (error) {
                         // If a duplicate id was created in parallel, continue and reload.
                         const maybeCode = (error as { code?: string } | null)?.code;
                         if (maybeCode !== "23505") throw error;
                     }
                 }
-                [tasksApi, columnsApi] = await Promise.all([fetchTasks(), fetchColumns()]);
+                [tasksApi, columnsApi] = await Promise.all([
+                    fetchTasks(projectId),
+                    fetchColumns(projectId),
+                ]);
             }
 
             const tasks: Task[] = tasksApi.map(mapApiTaskToUI);
@@ -147,7 +189,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
         // TASKS
         createTask: async (task) => {
-        const createdApi = await createTaskApi(mapUITaskToApi(task));
+        const projectId = get().selectedProjectId;
+        if (!projectId) return;
+        const createdApi = await createTaskApi(mapUITaskToApi(task), projectId);
         const createdTask = mapApiTaskToUI(createdApi);
 
         set((state) => {
@@ -214,7 +258,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
         // COLUMNS
         createColumn: async (column) => {
-        const created = await createColumnApi({ id: column.id, title: column.title });
+        const projectId = get().selectedProjectId;
+        if (!projectId) return;
+
+        const created = await createColumnApi({ id: column.id, title: column.title }, projectId);
         set((state) => ({
             columnsById: {
                 ...state.columnsById,
@@ -314,11 +361,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     exportBoard: async () => {
-        return exportBoardDataApi();
+        const projectId = get().selectedProjectId;
+        if (!projectId) throw new Error("No selected project");
+        return exportBoardDataApi(projectId);
     },
 
     importBoard: async (payload) => {
-        await importBoardDataApi(payload);
-        await get().loadBoard();
+        const projectId = get().selectedProjectId;
+        if (!projectId) throw new Error("No selected project");
+        await importBoardDataApi(projectId, payload);
+        await get().loadBoard(projectId);
     },
 }));
