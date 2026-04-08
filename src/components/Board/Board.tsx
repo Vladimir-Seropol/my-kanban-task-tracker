@@ -42,6 +42,7 @@ export const Board = ({ projectId }: BoardProps) => {
         editColumn,
         deleteColumn,
         loadBoard,
+        projectPermissions,
     } = useBoardStore();
 
     
@@ -99,6 +100,14 @@ export const Board = ({ projectId }: BoardProps) => {
         });
     };
 
+    const getErrorMessage = (error: unknown, fallback: string) => {
+        const message =
+            (error as { message?: string } | null)?.message ??
+            (error as { error_description?: string } | null)?.error_description;
+        if (message === "FORBIDDEN") return "Недостаточно прав для этого действия";
+        return fallback;
+    };
+
     
     // DND HANDLERS
         const onDragStart = (event: DragStartEvent) => {
@@ -128,7 +137,10 @@ export const Board = ({ projectId }: BoardProps) => {
             toIndex = column?.taskIds.length ?? 0;
         }
 
-        moveTask({ taskId, fromColumnId, toColumnId, toIndex });
+        void moveTask({ taskId, fromColumnId, toColumnId, toIndex }).catch((error) => {
+            console.error(error);
+            toast.error(getErrorMessage(error, "Не удалось переместить задачу"));
+        });
         setActiveTask(null);
     };
 
@@ -162,12 +174,14 @@ export const Board = ({ projectId }: BoardProps) => {
 
                 <h1 className={styles.title}>Доска</h1>
 
-                <Button
-                    variant="primary"
-                    onClick={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
-                >
-                    + Добавить колонку
-                </Button>
+                {projectPermissions.canManageColumns && (
+                    <Button
+                        variant="primary"
+                        onClick={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
+                    >
+                        + Добавить колонку
+                    </Button>
+                )}
 
             </div>
 
@@ -187,6 +201,7 @@ export const Board = ({ projectId }: BoardProps) => {
                             onDeleteTask={setDeleteTaskId}
                             onEditColumn={(id) => setColumnModal({ isOpen: true, title: column.title, editingId: id })}
                             onDeleteColumn={setDeleteColumnId}
+                            canManageColumns={projectPermissions.canManageColumns}
                         />
                     );
                 })}
@@ -201,8 +216,13 @@ export const Board = ({ projectId }: BoardProps) => {
                 title="Удалить задачу?"
                 description={deleteTaskId ? `Удалить задачу "${getTask(deleteTaskId)?.text}"` : ""}
                 onClose={() => setDeleteTaskId(null)}
-                onConfirm={() => {
-                    if (deleteTaskId) deleteTask(deleteTaskId);
+                onConfirm={async () => {
+                    try {
+                        if (deleteTaskId) await deleteTask(deleteTaskId);
+                    } catch (error) {
+                        console.error(error);
+                        toast.error(getErrorMessage(error, "Не удалось удалить задачу"));
+                    }
                     setDeleteTaskId(null);
                 }}
             />
@@ -213,8 +233,13 @@ export const Board = ({ projectId }: BoardProps) => {
                 title="Удалить колонку?"
                 description="Удалить колонку со всеми задачами?"
                 onClose={() => setDeleteColumnId(null)}
-                onConfirm={() => {
-                    if (deleteColumnId) deleteColumn(deleteColumnId);
+                onConfirm={async () => {
+                    try {
+                        if (deleteColumnId) await deleteColumn(deleteColumnId);
+                    } catch (error) {
+                        console.error(error);
+                        toast.error(getErrorMessage(error, "Не удалось удалить колонку"));
+                    }
                     setDeleteColumnId(null);
                 }}
             />
@@ -226,10 +251,15 @@ export const Board = ({ projectId }: BoardProps) => {
                 title={columnModal.title}
                 onTitleChange={(title) => setColumnModal((prev) => ({ ...prev, title }))}
                 onClose={() => setColumnModal({ isOpen: false, title: "", editingId: null })}
-                onSubmit={() => {
-                    if (columnModal.editingId) editColumn(columnModal.editingId, { title: columnModal.title });
-                    else createColumn({ id: crypto.randomUUID(), title: columnModal.title, taskIds: [] });
-                    setColumnModal({ isOpen: false, title: "", editingId: null });
+                onSubmit={async () => {
+                    try {
+                        if (columnModal.editingId) await editColumn(columnModal.editingId, { title: columnModal.title });
+                        else await createColumn({ id: crypto.randomUUID(), title: columnModal.title, taskIds: [] });
+                        setColumnModal({ isOpen: false, title: "", editingId: null });
+                    } catch (error) {
+                        console.error(error);
+                        toast.error(getErrorMessage(error, "Не удалось сохранить колонку"));
+                    }
                 }}
             />
 
@@ -254,6 +284,7 @@ export const Board = ({ projectId }: BoardProps) => {
                 onColumnChange={(columnId) => setTaskModal((prev) => ({ ...prev, columnId }))}
                 onClose={() => setTaskModal((prev) => ({ ...prev, isOpen: false }))}
                 onDelete={(id) => setDeleteTaskId(id)}
+                canDeleteTask={projectPermissions.canDeleteTasks}
                 onSubmit={async (task) => {
                     try {
                         if (taskModal.taskId) await editTask(task.id, { ...task });
@@ -261,7 +292,7 @@ export const Board = ({ projectId }: BoardProps) => {
                         setTaskModal({ isOpen: false, mode: "create", text: "", columnId: columnOrder[0] ?? "", taskId: null });
                     } catch (error) {
                         console.error(error);
-                        toast.error("Не удалось сохранить задачу. Проверьте migration add avatars в Supabase");
+                        toast.error(getErrorMessage(error, "Не удалось сохранить задачу"));
                     }
                 }}
             />

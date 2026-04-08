@@ -49,6 +49,17 @@ export type ProjectApi = {
   createdAt: string;
 };
 
+export type ProjectRole = "admin" | "member";
+
+export type ProjectPermissions = {
+  canManageProjects: boolean;
+  canManageColumns: boolean;
+  canDeleteTasks: boolean;
+  canCreateTasks: boolean;
+  canEditTasks: boolean;
+  canMoveTasks: boolean;
+};
+
 export type ID = string;
 
 export type State = {
@@ -87,6 +98,7 @@ export type TaskModalProps = BaseModalProps & {
   onTextChange: (value: string) => void;
   onColumnChange: (value: string) => void;
   onSubmit: (updatedTask: Task) => Promise<void> | void;
+  canDeleteTask?: boolean;
 };
 
 export type ConfirmModalProps = BaseModalProps & {
@@ -106,6 +118,7 @@ export type ColumnProps = {
   onDeleteTask: (taskId: string) => void;
   onEditColumn: (columnId: string) => void;
   onDeleteColumn: (columnId: string) => void;
+  canManageColumns?: boolean;
 };
 
 export type RowData = {

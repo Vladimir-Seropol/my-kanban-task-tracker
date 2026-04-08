@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, RefObject } from "react";
 import { supabase } from "../../lib/supabase";
-import type { ProjectApi } from "../../types/types";
+import type { ProjectApi, ProjectRole } from "../../types/types";
 import styles from "./AppSidebar.module.css";
 import { InputModal } from "../ui/InputModal/InputModal";
 import { ConfirmModal } from "../Column/ConfirmModal";
@@ -15,6 +15,8 @@ type AppSidebarProps = {
   userAvatarUrl?: string;
   projects: ProjectApi[];
   selectedProjectId: string | null;
+  projectRole: ProjectRole;
+  canManageProjects: boolean;
   importInputRef: RefObject<HTMLInputElement>;
   onToggleSidebar: () => void;
   onCreateProject: () => void;
@@ -34,6 +36,8 @@ export const AppSidebar = ({
   userAvatarUrl,
   projects,
   selectedProjectId,
+  projectRole,
+  canManageProjects,
   importInputRef,
   onToggleSidebar,
   onCreateProject,
@@ -162,17 +166,20 @@ export const AppSidebar = ({
       </div>
 
       <div className={styles.center}>
+        <div className={styles.roleBadge}>
+          Роль: {projectRole === "admin" ? "Админ" : "Участник"}
+        </div>
         <div className={styles.projectsHeader}>
           <span>Проекты</span>
           <div className={styles.projectActions}>
-            <button className={styles.smallBtn} type="button" onClick={onCreateProject}>
+            <button className={styles.smallBtn} type="button" onClick={onCreateProject} disabled={!canManageProjects}>
               + Проект
             </button>
             <button
               className={styles.smallBtn}
               type="button"
               onClick={() => setProjectRenameModalOpen(true)}
-              disabled={!selectedProjectId}
+              disabled={!selectedProjectId || !canManageProjects}
             >
               ✎
             </button>
@@ -180,7 +187,7 @@ export const AppSidebar = ({
               className={`${styles.smallBtn} ${styles.smallDanger}`}
               type="button"
               onClick={() => setDeleteProjectId(selectedProjectId)}
-              disabled={!selectedProjectId}
+              disabled={!selectedProjectId || !canManageProjects}
             >
               🗑
             </button>

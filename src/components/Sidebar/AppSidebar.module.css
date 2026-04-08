@@ -97,6 +97,18 @@
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+.roleBadge {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 3px 8px;
+  border: 1px solid #d7d0e7;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #4a3b65;
+  background: #fff;
+}
+
 .projectsHeader {
   display: flex;
   justify-content: space-between;

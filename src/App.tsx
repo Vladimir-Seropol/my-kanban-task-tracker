@@ -21,6 +21,8 @@ export default function App() {
   const {
     projects,
     selectedProjectId,
+    projectRole,
+    projectPermissions,
     loadProjects,
     selectProject,
     createProject,
@@ -187,6 +189,8 @@ export default function App() {
         userAvatarUrl={session.user.user_metadata?.avatar_url as string | undefined}
         projects={projects}
         selectedProjectId={selectedProjectId}
+        projectRole={projectRole}
+        canManageProjects={projectPermissions.canManageProjects}
         importInputRef={importInputRef}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         onCreateProject={handleCreateProject}

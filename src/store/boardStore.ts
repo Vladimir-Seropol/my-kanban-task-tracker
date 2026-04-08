@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import type { Task, TaskApi } from "../types/types";
+import type {
+    Task,
+    TaskApi,
+    ProjectApi,
+    ProjectPermissions,
+    ProjectRole,
+} from "../types/types";
 import {
     fetchTasks,
     fetchColumns,
@@ -14,11 +20,11 @@ import {
     updateColumnApi,
     deleteColumnApi,
     exportBoardDataApi,
+    fetchProjectRoleApi,
     importBoardDataApi,
     type BoardExportData,
 } from "../api/api";
 import { supabase } from "../lib/supabase";
-import type { ProjectApi } from "../types/types";
 
 export type Column = {
     id: string;
@@ -29,12 +35,15 @@ export type Column = {
 type BoardState = {
     projects: ProjectApi[];
     selectedProjectId: string | null;
+    projectRole: ProjectRole;
+    projectPermissions: ProjectPermissions;
     tasksById: Record<string, Task>;
     columnsById: Record<string, Column>;
     columnOrder: string[];
 
     loadProjects: () => Promise<void>;
     selectProject: (projectId: string) => void;
+    loadProjectRole: (projectId: string) => Promise<void>;
     createProject: (name: string) => Promise<void>;
     editProject: (projectId: string, name: string) => Promise<void>;
     deleteProject: (projectId: string) => Promise<void>;
@@ -101,10 +110,20 @@ const DEFAULT_COLUMNS = [
     { key: "done", title: "Готово" },
 ];
 let loadBoardInFlight: Promise<void> | null = null;
+const roleToPermissions = (role: ProjectRole): ProjectPermissions => ({
+    canManageProjects: role === "admin",
+    canManageColumns: role === "admin",
+    canDeleteTasks: role === "admin",
+    canCreateTasks: true,
+    canEditTasks: true,
+    canMoveTasks: true,
+});
 
 export const useBoardStore = create<BoardState>((set, get) => ({
     projects: [],
     selectedProjectId: null,
+    projectRole: "member",
+    projectPermissions: roleToPermissions("member"),
     tasksById: {},
     columnsById: {},
     columnOrder: [],
@@ -113,7 +132,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         const projects = await fetchProjectsApi();
         if (projects.length === 0) {
             const created = await createProjectApi("Мой проект");
-            set({ projects: [created], selectedProjectId: created.id });
+            set({
+                projects: [created],
+                selectedProjectId: created.id,
+                projectRole: "admin",
+                projectPermissions: roleToPermissions("admin"),
+            });
             return;
         }
 
@@ -121,21 +145,39 @@ export const useBoardStore = create<BoardState>((set, get) => ({
             projects,
             selectedProjectId: state.selectedProjectId ?? projects[0].id,
         }));
+
+        const selected = get().selectedProjectId ?? projects[0]?.id;
+        if (selected) {
+            await get().loadProjectRole(selected);
+        }
     },
 
     selectProject: (projectId) => {
         set({ selectedProjectId: projectId });
+        void get().loadProjectRole(projectId);
+    },
+
+    loadProjectRole: async (projectId) => {
+        const role = await fetchProjectRoleApi(projectId);
+        set({
+            projectRole: role,
+            projectPermissions: roleToPermissions(role),
+        });
     },
 
     createProject: async (name) => {
+        if (!get().projectPermissions.canManageProjects) throw new Error("FORBIDDEN");
         const created = await createProjectApi(name.trim());
         set((state) => ({
             projects: [...state.projects, created],
             selectedProjectId: created.id,
+            projectRole: "admin",
+            projectPermissions: roleToPermissions("admin"),
         }));
     },
 
     editProject: async (projectId, name) => {
+        if (!get().projectPermissions.canManageProjects) throw new Error("FORBIDDEN");
         const updated = await updateProjectApi(projectId, name.trim());
         set((state) => ({
             projects: state.projects.map((project) =>
@@ -145,6 +187,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     deleteProject: async (projectId) => {
+        if (!get().projectPermissions.canManageProjects) throw new Error("FORBIDDEN");
         await deleteProjectApi(projectId);
         set((state) => {
             const projects = state.projects.filter((project) => project.id !== projectId);
@@ -165,6 +208,8 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
         // LOAD BOARD
         loadBoard: async (projectId) => {
+        await get().loadProjectRole(projectId);
+
         if (loadBoardInFlight) {
             await loadBoardInFlight;
             return;
@@ -176,7 +221,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
                 fetchColumns(projectId),
             ]);
 
-            if (columnsApi.length === 0) {
+            if (columnsApi.length === 0 && get().projectPermissions.canManageColumns) {
                 const { data: authData } = await supabase.auth.getUser();
                 const uid = authData.user?.id;
 
@@ -219,6 +264,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
         // TASKS
         createTask: async (task) => {
+        if (!get().projectPermissions.canCreateTasks) throw new Error("FORBIDDEN");
         const projectId = get().selectedProjectId;
         if (!projectId) return;
         const createdApi = await createTaskApi(mapUITaskToApi(task), projectId);
@@ -239,6 +285,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     editTask: async (taskId, updates) => {
+        if (!get().projectPermissions.canEditTasks) throw new Error("FORBIDDEN");
         const state = get();
         const current = state.tasksById[taskId];
         const updatedApi = await updateTaskApi(taskId, mapUITaskToApi({ ...current, ...updates }));
@@ -266,6 +313,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     deleteTask: async (taskId) => {
+        if (!get().projectPermissions.canDeleteTasks) throw new Error("FORBIDDEN");
         const task = get().tasksById[taskId];
         if (!task) return;
 
@@ -288,6 +336,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
         // COLUMNS
         createColumn: async (column) => {
+        if (!get().projectPermissions.canManageColumns) throw new Error("FORBIDDEN");
         const projectId = get().selectedProjectId;
         if (!projectId) return;
 
@@ -306,6 +355,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     editColumn: async (columnId, updates) => {
+        if (!get().projectPermissions.canManageColumns) throw new Error("FORBIDDEN");
         const current = get().columnsById[columnId];
         if (!current) return;
 
@@ -317,6 +367,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     deleteColumn: async (columnId) => {
+        if (!get().projectPermissions.canManageColumns) throw new Error("FORBIDDEN");
         const column = get().columnsById[columnId];
         if (!column) return;
 
@@ -339,6 +390,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
         // DND
         moveTask: async ({ taskId, fromColumnId, toColumnId, toIndex }) => {
+        if (!get().projectPermissions.canMoveTasks) throw new Error("FORBIDDEN");
         const state = get();
         const fromColumn = state.columnsById[fromColumnId];
         const toColumn = state.columnsById[toColumnId];

@@ -19,6 +19,7 @@ export const TaskModal = ({
   task,
   onClose,
   onSubmit,
+  canDeleteTask = true,
   onDelete,
 }: TaskModalProps & { onDelete?: (id: string) => void }) => {
   const [isEditingViewTask, setIsEditingViewTask] = useState(false);
@@ -140,17 +141,19 @@ export const TaskModal = ({
                 ✏️ Редактировать
               </Button>
 
-              <Button
-                variant="danger"
-                onClick={() => {
-                  if (task && onDelete) {
-                    onDelete(task.id);
-                    handleClose();
-                  }
-                }}
-              >
-                🗑 Удалить
-              </Button>
+              {canDeleteTask && (
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    if (task && onDelete) {
+                      onDelete(task.id);
+                      handleClose();
+                    }
+                  }}
+                >
+                  🗑 Удалить
+                </Button>
+              )}
 
               <Button variant="secondary" onClick={handleClose}>
                 Закрыть

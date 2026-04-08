@@ -49,6 +49,7 @@ export const Column = ({
     onDeleteTask,
     onEditColumn,
     onDeleteColumn,
+    canManageColumns = true,
 }: ColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
         id: column.id, data: {
@@ -76,19 +77,21 @@ export const Column = ({
             <div className={styles.header}>
                 <h3 className={styles.title}>{column.title}</h3>
 
-                <div className={styles.actions}>
-                    <Button size="sm" onClick={() => onEditColumn(column.id)}>
-                        Редактировать
-                    </Button>
+                {canManageColumns && (
+                    <div className={styles.actions}>
+                        <Button size="sm" onClick={() => onEditColumn(column.id)}>
+                            Редактировать
+                        </Button>
 
-                    <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => onDeleteColumn(column.id)}
-                    >
-                        Удалить
-                    </Button>
-                </div>
+                        <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => onDeleteColumn(column.id)}
+                        >
+                            Удалить
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* CONTENT */}

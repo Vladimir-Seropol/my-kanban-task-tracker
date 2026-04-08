@@ -1,5 +1,10 @@
 import { supabase } from "../lib/supabase";
-import type { TaskApi, ColumnType, ProjectApi } from "../types/types";
+import type {
+  TaskApi,
+  ColumnType,
+  ProjectApi,
+  ProjectRole,
+} from "../types/types";
 
 type TaskRow = {
   id: string;
@@ -31,6 +36,11 @@ type ProjectRow = {
   id: string;
   name: string;
   created_at: string;
+  owner_id?: string;
+};
+
+type ProjectMemberRow = {
+  role: ProjectRole;
 };
 
 const mapTaskRowToApi = (row: TaskRow): TaskApi => ({
@@ -331,4 +341,37 @@ export const updateProjectApi = async (
 export const deleteProjectApi = async (projectId: string): Promise<void> => {
   const { error } = await supabase.from("projects").delete().eq("id", projectId);
   if (error) throw error;
+};
+
+export const fetchProjectRoleApi = async (
+  projectId: string
+): Promise<ProjectRole> => {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  const userId = authData.user?.id;
+  if (!userId) return "member";
+
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .select("owner_id")
+    .eq("id", projectId)
+    .maybeSingle<{ owner_id: string }>();
+
+  if (projectError) throw projectError;
+  if (project?.owner_id === userId) return "admin";
+
+  const { data: membership, error: memberError } = await supabase
+    .from("project_members")
+    .select("role")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle<ProjectMemberRow>();
+
+  if (memberError) {
+    // Backward compatibility before project_members migration is applied.
+    if (memberError.code === "42P01") return "admin";
+    throw memberError;
+  }
+
+  return membership?.role === "admin" ? "admin" : "member";
 };
