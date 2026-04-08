@@ -3,16 +3,21 @@ import type { ChangeEvent } from "react";
 import { Board } from "./components/Board/Board";
 import { AuthPage } from "./components/Auth/AuthPage";
 import { supabase } from "./lib/supabase";
+import { AppSidebar } from "./components/Sidebar/AppSidebar";
+import { InputModal } from "./components/ui/InputModal/InputModal";
 import type { Session } from "@supabase/supabase-js";
 import type { TaskApi } from "./types/types";
 import { useBoardStore } from "./store/boardStore";
+import { Toaster, toast } from "sonner";
 import "./App.css";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [projectNameModalOpen, setProjectNameModalOpen] = useState(false);
+  const [projectsLoadError, setProjectsLoadError] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const {
     projects,
     selectedProjectId,
@@ -47,8 +52,19 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return;
-    loadProjects().catch(console.error);
+    loadProjects()
+      .then(() => setProjectsLoadError(null))
+      .catch((error) => {
+        console.error(error);
+        setProjectsLoadError("Не удалось загрузить проекты");
+        toast.error("Не удалось загрузить проекты");
+      });
   }, [session, loadProjects]);
+
+  useEffect(() => {
+    if (selectedProjectId || projects.length === 0) return;
+    selectProject(projects[0].id);
+  }, [projects, selectedProjectId, selectProject]);
 
   if (authLoading) {
     return <div className="app-loading">Загрузка...</div>;
@@ -58,10 +74,31 @@ export default function App() {
     return <AuthPage onAuthSuccess={() => undefined} />;
   }
 
-  const handleCreateProject = async () => {
-    const nextName = window.prompt("Название проекта");
-    if (!nextName?.trim()) return;
-    await createProject(nextName);
+  const handleCreateProject = () => {
+    setProjectNameModalOpen(true);
+  };
+
+  const handleCreateProjectSubmit = async (nextName: string) => {
+    try {
+      await createProject(nextName);
+      setProjectNameModalOpen(false);
+      toast.success("Проект создан");
+    } catch (error) {
+      console.error(error);
+      toast.error("Не удалось создать проект");
+    }
+  };
+
+  const handleRetryLoadProjects = async () => {
+    try {
+      await loadProjects();
+      setProjectsLoadError(null);
+      toast.success("Проекты загружены");
+    } catch (error) {
+      console.error(error);
+      setProjectsLoadError("Не удалось загрузить проекты");
+      toast.error("Повторная загрузка не удалась");
+    }
   };
 
   const handleExportProject = async () => {
@@ -77,7 +114,7 @@ export default function App() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
-      window.alert("Не удалось выполнить экспорт.");
+      toast.error("Не удалось выполнить экспорт");
     }
   };
 
@@ -98,7 +135,7 @@ export default function App() {
       };
 
       if (!parsed.columns || !Array.isArray(parsed.columns) || !parsed.tasks || !Array.isArray(parsed.tasks)) {
-        window.alert("Неверный формат JSON. Ожидаются поля columns[] и tasks[].");
+        toast.error("Неверный формат JSON. Ожидаются поля columns[] и tasks[]");
         return;
       }
 
@@ -108,10 +145,10 @@ export default function App() {
         tasks: parsed.tasks,
       });
 
-      window.alert("Импорт завершен.");
+      toast.success("Импорт завершен");
     } catch (error) {
       console.error(error);
-      window.alert("Не удалось импортировать JSON.");
+      toast.error("Не удалось импортировать JSON");
     } finally {
       event.target.value = "";
     }
@@ -119,64 +156,46 @@ export default function App() {
 
   return (
     <div className={`app-shell ${sidebarOpen ? "app-shell--sidebar-open" : ""}`}>
-      <aside className={`app-sidebar ${sidebarOpen ? "open" : "closed"}`}>
-        <div className="app-sidebar-top">
-          <div className="app-user-block">
-            <div className="app-user-avatar">{(session.user.email?.[0] ?? "U").toUpperCase()}</div>
-            <div className="app-user-meta">
-              <div className="app-user-name">{session.user.email}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="app-sidebar-center">
-          <div className="app-projects-header">
-            <span>Проекты</span>
-            <button className="app-small-btn" type="button" onClick={handleCreateProject}>
-              + Проект
-            </button>
-          </div>
-
-          <div className="app-projects-list">
-            {projects.map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                className={`app-project-item ${selectedProjectId === project.id ? "active" : ""}`}
-                onClick={() => selectProject(project.id)}
-              >
-                {project.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="app-sidebar-bottom">
-          <button className="app-sidebar-btn" type="button" onClick={handleExportProject} disabled={!selectedProjectId}>
-            Экспорт JSON
-          </button>
-          <button className="app-sidebar-btn" type="button" onClick={handleImportProjectClick} disabled={!selectedProjectId}>
-            Импорт JSON
-          </button>
-          <button className="app-sidebar-btn danger" type="button" onClick={() => supabase.auth.signOut()}>
-            Выйти из аккаунта
-          </button>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept="application/json"
-            style={{ display: "none" }}
-            onChange={handleImportProjectFile}
-          />
-        </div>
-      </aside>
+      <Toaster richColors position="top-right" />
+      <AppSidebar
+        sidebarOpen={sidebarOpen}
+        userId={session.user.id}
+        userEmail={session.user.email}
+        userName={session.user.user_metadata?.full_name as string | undefined}
+        userAvatarUrl={session.user.user_metadata?.avatar_url as string | undefined}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        importInputRef={importInputRef}
+        onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+        onCreateProject={handleCreateProject}
+        onSelectProject={selectProject}
+        onExportProject={handleExportProject}
+        onImportProjectClick={handleImportProjectClick}
+        onImportProjectFile={handleImportProjectFile}
+      />
 
       <div className="app-main">
-        <button className="app-sidebar-toggle" type="button" onClick={() => setSidebarOpen((prev) => !prev)}>
-          {sidebarOpen ? "Скрыть меню" : "Показать меню"}
-        </button>
-        {selectedProjectId ? <Board key={selectedProjectId} projectId={selectedProjectId} /> : <div className="app-loading">Загрузка проекта...</div>}
+        {projectsLoadError ? (
+          <div className="app-loading" style={{ flexDirection: "column", gap: 10 }}>
+            <div>{projectsLoadError}</div>
+            <button type="button" onClick={() => void handleRetryLoadProjects()}>
+              Повторить
+            </button>
+          </div>
+        ) : selectedProjectId ? (
+          <Board key={selectedProjectId} projectId={selectedProjectId} />
+        ) : (
+          <div className="app-loading">Загрузка проекта...</div>
+        )}
       </div>
+      <InputModal
+        isOpen={projectNameModalOpen}
+        title="Новый проект"
+        label="Введите название проекта"
+        onClose={() => setProjectNameModalOpen(false)}
+        onConfirm={handleCreateProjectSubmit}
+        confirmText="Создать"
+      />
     </div>
   );
 }

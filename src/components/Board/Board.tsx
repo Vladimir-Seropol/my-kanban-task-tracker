@@ -18,6 +18,7 @@ import { ConfirmModal } from "../Column/ConfirmModal";
 import { BoardSkeleton } from "../ui/BoardSkeleton";
 import { Button } from "../ui/Button/Button";
 import styles from "./Board.module.css";
+import { toast } from "sonner";
 
 import type { Task } from "../../types/types";
 import { useBoardStore } from "../../store/boardStore";
@@ -260,7 +261,7 @@ export const Board = ({ projectId }: BoardProps) => {
                         setTaskModal({ isOpen: false, mode: "create", text: "", columnId: columnOrder[0] ?? "", taskId: null });
                     } catch (error) {
                         console.error(error);
-                        window.alert("Не удалось сохранить задачу. Проверьте, что в Supabase добавлены колонки для аватаров (migration add avatars).");
+                        toast.error("Не удалось сохранить задачу. Проверьте migration add avatars в Supabase");
                     }
                 }}
             />

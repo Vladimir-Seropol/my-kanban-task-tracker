@@ -14,7 +14,6 @@
 For an existing Supabase project, additionally run:
 
 - `supabase-migration-auth-rls-owner-team.sql`
-- `supabase-migration-add-avatars.sql`
 - `supabase-migration-storage-avatars.sql`
 - `supabase-migration-soft-delete.sql`
 - `supabase-migration-projects.sql`

@@ -2,11 +2,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import styles from "./TaskModal.module.css";
 import { Button } from "../ui/Button/Button";
 import { TaskPersonRow } from "./TaskPersonRow";
-import { UserAvatar } from "../ui/UserAvatar/UserAvatar";
-import { removeAvatarFromStorage, uploadAvatarToStorage } from "../../lib/avatarStorage";
 import type { Task, TaskModalProps } from "../../types/types";
-
-const MAX_AVATAR_BYTES = 450_000;
 
 const priorityColors: Record<Task["priority"], string> = {
   низкий: "#4caf50",
@@ -40,8 +36,6 @@ export const TaskModal = ({
       order: task?.order || 0,
       assignee: task?.assignee || "",
       reporter: task?.reporter || "",
-      assigneeAvatarUrl: task?.assigneeAvatarUrl,
-      reporterAvatarUrl: task?.reporterAvatarUrl,
       source: task?.source || "",
       description: task?.description || "",
       createdAt:
@@ -55,7 +49,6 @@ export const TaskModal = ({
   );
 
   const [form, setForm] = useState<Task>(defaultTask);
-  const [uploadingAvatar, setUploadingAvatar] = useState<"assignee" | "reporter" | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -94,32 +87,7 @@ export const TaskModal = ({
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const canSubmit =
-    form.text.trim().length > 0 && Boolean(form.columnId) && uploadingAvatar === null;
-  const handleAvatarUpload = async (file: File, role: "assignee" | "reporter") => {
-    if (!file.type.startsWith("image/")) return;
-    if (file.size > MAX_AVATAR_BYTES) {
-      window.alert("Файл слишком большой (макс. ~450 КБ).");
-      return;
-    }
-
-    setUploadingAvatar(role);
-    try {
-      const prevUrl =
-        role === "assignee" ? form.assigneeAvatarUrl : form.reporterAvatarUrl;
-      const url = await uploadAvatarToStorage(file, role);
-
-      if (role === "assignee") handleChange("assigneeAvatarUrl", url);
-      else handleChange("reporterAvatarUrl", url);
-
-      await removeAvatarFromStorage(prevUrl);
-    } catch (error) {
-      console.error(error);
-      window.alert("Не удалось загрузить фото. Проверьте bucket/policies в Supabase Storage.");
-    } finally {
-      setUploadingAvatar(null);
-    }
-  };
+  const canSubmit = form.text.trim().length > 0 && Boolean(form.columnId);
 
 
   const formatDate = (date?: string) =>
@@ -156,8 +124,8 @@ export const TaskModal = ({
               <p><b>Приоритет:</b> {task.priority}</p>
               <p><b>Участники</b></p>
               <div className={styles.viewPeople}>
-                <TaskPersonRow role="Исп." name={task.assignee} avatarUrl={task.assigneeAvatarUrl} />
-                <TaskPersonRow role="Реп." name={task.reporter ?? ""} avatarUrl={task.reporterAvatarUrl} />
+                <TaskPersonRow role="Исп." name={task.assignee} />
+                <TaskPersonRow role="Реп." name={task.reporter ?? ""} />
               </div>
               <p><b>Источник:</b> {task.source}</p>
               <p><b>Описание:</b> {task.description}</p>
@@ -237,78 +205,18 @@ export const TaskModal = ({
               ))}
             </select>
 
-            <div className={styles.avatarBlock}>
-              <div className={styles.avatarLine}>
-                <input
-                  className={styles.input}
-                  value={form.assignee}
-                  onChange={(e) => handleChange("assignee", e.target.value)}
-                  placeholder="Исполнитель"
-                />
-                <UserAvatar src={form.assigneeAvatarUrl} alt={form.assignee || "Исполнитель"} />
-                <label className={styles.avatarUpload}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className={styles.avatarInput}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void handleAvatarUpload(f, "assignee");
-                      e.target.value = "";
-                    }}
-                  />
-                  {uploadingAvatar === "assignee" ? "Загрузка..." : "Фото"}
-                </label>
-                {form.assigneeAvatarUrl ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={async () => {
-                      await removeAvatarFromStorage(form.assigneeAvatarUrl);
-                      handleChange("assigneeAvatarUrl", "");
-                    }}
-                  >
-                    Сбросить
-                  </Button>
-                ) : null}
-              </div>
-              <div className={styles.avatarLine}>
-                <input
-                  className={styles.input}
-                  value={form.reporter}
-                  onChange={(e) => handleChange("reporter", e.target.value)}
-                  placeholder="Репортер"
-                />
-                <UserAvatar src={form.reporterAvatarUrl} alt={form.reporter || "Репортер"} />
-                <label className={styles.avatarUpload}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className={styles.avatarInput}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void handleAvatarUpload(f, "reporter");
-                      e.target.value = "";
-                    }}
-                  />
-                  {uploadingAvatar === "reporter" ? "Загрузка..." : "Фото"}
-                </label>
-                {form.reporterAvatarUrl ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={async () => {
-                      await removeAvatarFromStorage(form.reporterAvatarUrl);
-                      handleChange("reporterAvatarUrl", "");
-                    }}
-                  >
-                    Сбросить
-                  </Button>
-                ) : null}
-              </div>
-            </div>
+            <input
+              className={styles.input}
+              value={form.assignee}
+              onChange={(e) => handleChange("assignee", e.target.value)}
+              placeholder="Исполнитель"
+            />
+            <input
+              className={styles.input}
+              value={form.reporter}
+              onChange={(e) => handleChange("reporter", e.target.value)}
+              placeholder="Репортер"
+            />
 
             <input
               className={styles.input}

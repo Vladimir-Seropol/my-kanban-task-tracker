@@ -1,0 +1,59 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 10, 20, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5000;
+}
+
+.modal {
+  width: min(440px, 92vw);
+  background: #fff;
+  border: 1px solid #e7e1f4;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+  color: #3f2f66;
+  font-size: 18px;
+}
+
+.label {
+  font-size: 13px;
+  color: #5a4b74;
+}
+
+.input {
+  border: 1px solid #d8d0ea;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn {
+  border: 1px solid #d8d0ea;
+  border-radius: 8px;
+  background: #fff;
+  color: #4a3b65;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.primary {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: #fff;
+}

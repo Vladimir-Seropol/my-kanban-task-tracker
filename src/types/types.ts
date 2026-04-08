@@ -8,8 +8,6 @@ export type TaskApi = {
 
   assignee: string;
   reporter: string;
-  assigneeAvatarUrl?: string;
-  reporterAvatarUrl?: string;
   source: string;
   description: string;
   epic: string;
@@ -29,8 +27,6 @@ export type Task = {
 
   assignee: string;
   reporter?: string;
-  assigneeAvatarUrl?: string;
-  reporterAvatarUrl?: string;
   source?: string;
   description: string;
   epic?: string;

@@ -23,7 +23,6 @@
 
 .columns {
   display: flex;
-  justify-content: center;
   margin-top: 75px;
 }
 

@@ -77,17 +77,9 @@ export const TaskCardContent = ({
       </div>
 
       <div className={taskStyles.users}>
-        <TaskPersonRow
-          role="Исп."
-          name={task.assignee}
-          avatarUrl={task.assigneeAvatarUrl}
-        />
+        <TaskPersonRow role="Исп." name={task.assignee} />
         {task.reporter?.trim() ? (
-          <TaskPersonRow
-            role="Реп."
-            name={task.reporter}
-            avatarUrl={task.reporterAvatarUrl}
-          />
+          <TaskPersonRow role="Реп." name={task.reporter} />
         ) : null}
       </div>
 

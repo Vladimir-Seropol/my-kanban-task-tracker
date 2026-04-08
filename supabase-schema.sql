@@ -30,8 +30,6 @@ create table if not exists public.tasks (
   team_id uuid references public.teams(id) on delete set null,
   assignee text not null default '',
   reporter text not null default '',
-  assignee_avatar_url text,
-  reporter_avatar_url text,
   source text not null default '',
   description text not null default '',
   epic text not null default '',
