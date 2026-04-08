@@ -149,7 +149,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
                 const uid = authData.user?.id;
 
                 for (const column of DEFAULT_COLUMNS) {
-                    const seededId = uid ? `${uid}-${column.key}` : crypto.randomUUID();
+                    const seededId = uid
+                        ? `${uid}-${projectId}-${column.key}`
+                        : `${projectId}-${column.key}-${crypto.randomUUID()}`;
                     try {
                         await createColumnApi({ id: seededId, title: column.title }, projectId);
                     } catch (error) {
