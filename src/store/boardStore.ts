@@ -13,6 +13,7 @@ import {
     importBoardDataApi,
     type BoardExportData,
 } from "../api/api";
+import { supabase } from "../lib/supabase";
 
 export type Column = {
     id: string;
@@ -86,11 +87,12 @@ const mapUITaskToApi = (task: Task): TaskApi => ({
     dueDate: task.dueDate,
 });
 
-const DEFAULT_COLUMNS: Array<{ id: string; title: string }> = [
-    { id: "todo", title: "Созданные" },
-    { id: "in-progress", title: "В работе" },
-    { id: "done", title: "Готово" },
+const DEFAULT_COLUMNS = [
+    { key: "todo", title: "Созданные" },
+    { key: "in-progress", title: "В работе" },
+    { key: "done", title: "Готово" },
 ];
+let loadBoardInFlight: Promise<void> | null = null;
 
 export const useBoardStore = create<BoardState>((set, get) => ({
     tasksById: {},
@@ -99,25 +101,48 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
         // LOAD BOARD
         loadBoard: async () => {
-        let [tasksApi, columnsApi] = await Promise.all([fetchTasks(), fetchColumns()]);
-
-        if (columnsApi.length === 0) {
-            await Promise.all(DEFAULT_COLUMNS.map((column) => createColumnApi(column)));
-            [tasksApi, columnsApi] = await Promise.all([fetchTasks(), fetchColumns()]);
+        if (loadBoardInFlight) {
+            await loadBoardInFlight;
+            return;
         }
 
-        const tasks: Task[] = tasksApi.map(mapApiTaskToUI);
+        loadBoardInFlight = (async () => {
+            let [tasksApi, columnsApi] = await Promise.all([fetchTasks(), fetchColumns()]);
 
-        const columns: Column[] = columnsApi.map((col) => ({
-            id: col.id,
-            title: col.title,
-            taskIds: tasks.filter((t) => t.columnId === col.id).map((t) => t.id),
-        }));
+            if (columnsApi.length === 0) {
+                const { data: authData } = await supabase.auth.getUser();
+                const uid = authData.user?.id;
 
-        const tasksById = Object.fromEntries(tasks.map((t) => [t.id, t]));
-        const columnsById = Object.fromEntries(columns.map((c) => [c.id, c]));
+                for (const column of DEFAULT_COLUMNS) {
+                    const seededId = uid ? `${uid}-${column.key}` : crypto.randomUUID();
+                    try {
+                        await createColumnApi({ id: seededId, title: column.title });
+                    } catch (error) {
+                        // If a duplicate id was created in parallel, continue and reload.
+                        const maybeCode = (error as { code?: string } | null)?.code;
+                        if (maybeCode !== "23505") throw error;
+                    }
+                }
+                [tasksApi, columnsApi] = await Promise.all([fetchTasks(), fetchColumns()]);
+            }
 
-        set({ tasksById, columnsById, columnOrder: columns.map((c) => c.id) });
+            const tasks: Task[] = tasksApi.map(mapApiTaskToUI);
+
+            const columns: Column[] = columnsApi.map((col) => ({
+                id: col.id,
+                title: col.title,
+                taskIds: tasks.filter((t) => t.columnId === col.id).map((t) => t.id),
+            }));
+
+            const tasksById = Object.fromEntries(tasks.map((t) => [t.id, t]));
+            const columnsById = Object.fromEntries(columns.map((c) => [c.id, c]));
+
+            set({ tasksById, columnsById, columnOrder: columns.map((c) => c.id) });
+        })().finally(() => {
+            loadBoardInFlight = null;
+        });
+
+        await loadBoardInFlight;
     },
 
         // TASKS
