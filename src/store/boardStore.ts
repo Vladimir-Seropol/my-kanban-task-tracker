@@ -24,7 +24,6 @@ import {
     importBoardDataApi,
     type BoardExportData,
 } from "../api/api";
-import { supabase } from "../lib/supabase";
 
 export type Column = {
     id: string;
@@ -104,11 +103,6 @@ const mapUITaskToApi = (task: Task): TaskApi => ({
     dueDate: task.dueDate,
 });
 
-const DEFAULT_COLUMNS = [
-    { key: "todo", title: "Созданные" },
-    { key: "in-progress", title: "В работе" },
-    { key: "done", title: "Готово" },
-];
 let loadBoardInFlight: Promise<void> | null = null;
 const roleToPermissions = (role: ProjectRole): ProjectPermissions => ({
     canManageProjects: role === "admin",
@@ -216,32 +210,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         }
 
         loadBoardInFlight = (async () => {
-            let [tasksApi, columnsApi] = await Promise.all([
+            const [tasksApi, columnsApi] = await Promise.all([
                 fetchTasks(projectId),
                 fetchColumns(projectId),
             ]);
-
-            if (columnsApi.length === 0 && get().projectPermissions.canManageColumns) {
-                const { data: authData } = await supabase.auth.getUser();
-                const uid = authData.user?.id;
-
-                for (const column of DEFAULT_COLUMNS) {
-                    const seededId = uid
-                        ? `${uid}-${projectId}-${column.key}`
-                        : `${projectId}-${column.key}-${crypto.randomUUID()}`;
-                    try {
-                        await createColumnApi({ id: seededId, title: column.title }, projectId);
-                    } catch (error) {
-                        // If a duplicate id was created in parallel, continue and reload.
-                        const maybeCode = (error as { code?: string } | null)?.code;
-                        if (maybeCode !== "23505") throw error;
-                    }
-                }
-                [tasksApi, columnsApi] = await Promise.all([
-                    fetchTasks(projectId),
-                    fetchColumns(projectId),
-                ]);
-            }
 
             const tasks: Task[] = tasksApi.map(mapApiTaskToUI);
 

@@ -69,6 +69,7 @@ export const Board = ({ projectId }: BoardProps) => {
         editingId: null as string | null,
     });
     const [isBoardLoaded, setIsBoardLoaded] = useState(false);
+    const [didAutoOpenColumnModal, setDidAutoOpenColumnModal] = useState(false);
 
     
     // EFFECTS
@@ -82,6 +83,14 @@ export const Board = ({ projectId }: BoardProps) => {
             document.body.style.cursor = "";
         };
     }, [activeTask]);
+    useEffect(() => {
+        if (!isBoardLoaded) return;
+        if (didAutoOpenColumnModal) return;
+        if (columnOrder.length > 0) return;
+        if (!projectPermissions.canManageColumns) return;
+        setColumnModal({ isOpen: true, title: "", editingId: null });
+        setDidAutoOpenColumnModal(true);
+    }, [isBoardLoaded, didAutoOpenColumnModal, columnOrder.length, projectPermissions.canManageColumns]);
 
     
     // HELPERS
@@ -186,8 +195,27 @@ export const Board = ({ projectId }: BoardProps) => {
             </div>
 
             {/* COLUMNS */}
-            <div className={styles.columns}>
-                {columnOrder.map((columnId) => {
+            {columnOrder.length === 0 ? (
+                <div className={styles.emptyBoard}>
+                    {projectPermissions.canManageColumns ? (
+                        <>
+                            <p className={styles.emptyText}>В проекте пока нет колонок.</p>
+                            <Button
+                                variant="primary"
+                                onClick={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
+                            >
+                                + Создать первую колонку
+                            </Button>
+                        </>
+                    ) : (
+                        <p className={styles.emptyText}>
+                            Админ еще не настроил структуру проекта. Колонки появятся после настройки.
+                        </p>
+                    )}
+                </div>
+            ) : (
+                <div className={styles.columns}>
+                    {columnOrder.map((columnId) => {
                     const column = columnsById[columnId];
                     if (!column) return null;
 
@@ -204,8 +232,9 @@ export const Board = ({ projectId }: BoardProps) => {
                             canManageColumns={projectPermissions.canManageColumns}
                         />
                     );
-                })}
-            </div>
+                    })}
+                </div>
+            )}
 
             {/* DRAG OVERLAY */}
             <DragOverlay>{activeTask && <TaskOverlay task={activeTask} />}</DragOverlay>
