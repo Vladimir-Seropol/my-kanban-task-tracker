@@ -150,4 +150,81 @@ grant execute on function public.list_project_columns(uuid) to authenticated;
 revoke all on function public.list_project_tasks(uuid) from public;
 grant execute on function public.list_project_tasks(uuid) to authenticated;
 
+drop function if exists public.patch_project_task(text, jsonb);
+drop function if exists public.patch_project_task(jsonb, text);
+
+create or replace function public.patch_project_task(
+  p_patch jsonb,
+  p_task_id text
+)
+returns public.tasks
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r public.tasks;
+  ok boolean;
+begin
+  if p_patch is null or p_patch = '{}'::jsonb then
+    raise exception 'EMPTY_PATCH';
+  end if;
+
+  select true into ok
+  from public.tasks t
+  where t.id = p_task_id
+    and t.deleted_at is null
+    and (
+      exists (
+        select 1
+        from public.projects p
+        where p.id = t.project_id
+          and p.owner_id = auth.uid()
+      )
+      or exists (
+        select 1
+        from public.project_members pm
+        where pm.project_id = t.project_id
+          and pm.user_id = auth.uid()
+      )
+    );
+
+  if not coalesce(ok, false) then
+    raise exception 'NOT_FOUND_OR_FORBIDDEN';
+  end if;
+
+  update public.tasks t
+  set
+    text = case when p_patch ? 'text' then (p_patch->>'text')::text else t.text end,
+    column_id = case when p_patch ? 'column_id' then (p_patch->>'column_id')::text else t.column_id end,
+    order_index = case when p_patch ? 'order_index' then (p_patch->>'order_index')::int else t.order_index end,
+    assignee = case when p_patch ? 'assignee' then (p_patch->>'assignee')::text else t.assignee end,
+    reporter = case when p_patch ? 'reporter' then (p_patch->>'reporter')::text else t.reporter end,
+    source = case when p_patch ? 'source' then (p_patch->>'source')::text else t.source end,
+    description = case when p_patch ? 'description' then (p_patch->>'description')::text else t.description end,
+    epic = case when p_patch ? 'epic' then (p_patch->>'epic')::text else t.epic end,
+    tags = case
+      when p_patch ? 'tags' then coalesce(
+        array(select jsonb_array_elements_text(p_patch->'tags')),
+        '{}'::text[]
+      )
+      else t.tags
+    end,
+    priority = case when p_patch ? 'priority' then (p_patch->>'priority')::text else t.priority end,
+    created_at = case when p_patch ? 'created_at' then (p_patch->>'created_at')::text else t.created_at end,
+    due_date = case
+      when p_patch ? 'due_date' and jsonb_typeof(p_patch->'due_date') = 'null' then null
+      when p_patch ? 'due_date' then (p_patch->>'due_date')::text
+      else t.due_date
+    end
+  where t.id = p_task_id
+  returning t.* into strict r;
+
+  return r;
+end;
+$$;
+
+revoke all on function public.patch_project_task(jsonb, text) from public;
+grant execute on function public.patch_project_task(jsonb, text) to authenticated;
+
 notify pgrst, 'reload schema';

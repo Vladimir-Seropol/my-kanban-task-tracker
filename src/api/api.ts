@@ -152,19 +152,30 @@ export const createTaskApi = async (
   return mapTaskRowToApi(data);
 };
 
+/**
+ * Через RPC patch_project_task: прямой UPDATE под RLS часто не трогает чужие по owner_id задачи
+ * (0 строк), а клиент без .select() этого не видит. RPC — SECURITY DEFINER + проверка проекта/участия.
+ */
 export const updateTaskApi = async (
   taskId: string,
   data: Partial<TaskApi>
 ): Promise<TaskApi> => {
-  const { data: updated, error } = await supabase
-    .from("tasks")
-    .update(mapTaskApiPatchToUpdate(data))
-    .eq("id", taskId)
-    .select("*")
-    .single<TaskRow>();
+  const patch = mapTaskApiPatchToUpdate(data);
+  const entries = Object.entries(patch).filter(([, v]) => v !== undefined);
+  if (entries.length === 0) {
+    throw new Error("EMPTY_TASK_PATCH");
+  }
+
+  const { data: row, error } = await supabase.rpc("patch_project_task", {
+    p_patch: Object.fromEntries(entries),
+    p_task_id: taskId,
+  });
 
   if (error) throw error;
-  return mapTaskRowToApi(updated);
+  const raw = Array.isArray(row) ? row[0] : row;
+  if (raw == null) throw new Error("PATCH_TASK_NO_ROW");
+
+  return mapTaskRowToApi(raw as TaskRow);
 };
 
 export const deleteTaskApi = async (taskId: string): Promise<void> => {
