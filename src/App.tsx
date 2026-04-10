@@ -154,6 +154,12 @@ export default function App() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!selectedProjectId) {
+      toast.error("Сначала выберите проект, в который импортировать доску (или создайте новый).");
+      event.target.value = "";
+      return;
+    }
+
     try {
       const text = await file.text();
       const parsed = JSON.parse(text) as {
@@ -168,7 +174,7 @@ export default function App() {
       }
 
       await importBoard({
-        projectId: selectedProjectId ?? "",
+        projectId: selectedProjectId,
         columns: parsed.columns,
         tasks: parsed.tasks,
       });
@@ -176,17 +182,20 @@ export default function App() {
       toast.success("Импорт завершен");
     } catch (error) {
       console.error(error);
-      toast.error("Не удалось импортировать JSON");
+      toast.error(getErrorMessage(error, "Не удалось импортировать JSON"));
     } finally {
       event.target.value = "";
     }
   };
 
   const getErrorMessage = (error: unknown, fallback: string) => {
-    const message =
-      (error as { message?: string } | null)?.message ??
-      (error as { error_description?: string } | null)?.error_description;
+    const e = error as { message?: string; code?: string; error_description?: string } | null;
+    const message = e?.message ?? e?.error_description;
+    if (message === "IMPORT_RPC_MISSING")
+      return "На Supabase не применена миграция импорта. Выполните SQL: supabase-migration-import-board-rpc.sql";
     if (message === "FORBIDDEN") return "Недостаточно прав";
+    if (e?.code === "42501" || (typeof message === "string" && message.includes("row-level security")))
+      return "Импорт/запись заблокированы политиками БД. Выполните в Supabase SQL: supabase-migration-import-board-rpc.sql";
     return fallback;
   };
 
@@ -236,6 +245,7 @@ export default function App() {
         selectedProjectId={selectedProjectId}
         projectRole={projectRole}
         canManageProjects={projectPermissions.canManageProjects}
+        canManageColumns={projectPermissions.canManageColumns}
         members={projectMembers}
         importInputRef={importInputRef}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}

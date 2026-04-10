@@ -471,6 +471,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     importBoard: async (payload) => {
+        if (!get().projectPermissions.canManageColumns) throw new Error("FORBIDDEN");
         const projectId = get().selectedProjectId;
         if (!projectId) throw new Error("No selected project");
         await importBoardDataApi(projectId, payload);

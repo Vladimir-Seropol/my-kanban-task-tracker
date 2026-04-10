@@ -288,22 +288,6 @@ export const importBoardDataApi = async (
   projectId: string,
   payload: BoardExportData
 ): Promise<void> => {
-  const now = new Date().toISOString();
-
-  const { error: softDeleteTasksError } = await supabase
-    .from("tasks")
-    .update({ deleted_at: now })
-    .eq("project_id", projectId)
-    .is("deleted_at", null);
-  if (softDeleteTasksError) throw softDeleteTasksError;
-
-  const { error: softDeleteColumnsError } = await supabase
-    .from("columns")
-    .update({ deleted_at: now })
-    .eq("project_id", projectId)
-    .is("deleted_at", null);
-  if (softDeleteColumnsError) throw softDeleteColumnsError;
-
   const columnsToInsert = payload.columns.map((c) => ({
     id: c.id,
     title: c.title,
@@ -318,19 +302,15 @@ export const importBoardDataApi = async (
     project_id: projectId,
   }));
 
-  if (columnsToInsert.length > 0) {
-    const { error: columnsUpsertError } = await supabase
-      .from("columns")
-      .upsert(columnsToInsert, { onConflict: "id" });
-    if (columnsUpsertError) throw columnsUpsertError;
-  }
+  const rpc = await supabase.rpc("import_project_board", {
+    p_project_id: projectId,
+    p_columns: columnsToInsert,
+    p_tasks: tasksToInsert,
+  });
 
-  if (tasksToInsert.length > 0) {
-    const { error: tasksUpsertError } = await supabase
-      .from("tasks")
-      .upsert(tasksToInsert, { onConflict: "id" });
-    if (tasksUpsertError) throw tasksUpsertError;
-  }
+  if (!rpc.error) return;
+  if (isRpcMissingError(rpc.error)) throw new Error("IMPORT_RPC_MISSING");
+  throw rpc.error;
 };
 
 export const fetchProjectsApi = async (): Promise<ProjectApi[]> => {

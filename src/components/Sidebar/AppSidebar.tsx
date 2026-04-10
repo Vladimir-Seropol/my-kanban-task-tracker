@@ -17,6 +17,7 @@ type AppSidebarProps = {
   selectedProjectId: string | null;
   projectRole: ProjectRole;
   canManageProjects: boolean;
+  canManageColumns: boolean;
   members: ProjectMember[];
   importInputRef: RefObject<HTMLInputElement>;
   onToggleSidebar: () => void;
@@ -42,6 +43,7 @@ export const AppSidebar = ({
   selectedProjectId,
   projectRole,
   canManageProjects,
+  canManageColumns,
   members,
   importInputRef,
   onToggleSidebar,
@@ -300,7 +302,13 @@ export const AppSidebar = ({
         <button className={styles.sidebarBtn} type="button" onClick={onExportProject} disabled={!selectedProjectId}>
           Экспорт JSON
         </button>
-        <button className={styles.sidebarBtn} type="button" onClick={onImportProjectClick} disabled={!selectedProjectId}>
+        <button
+          className={styles.sidebarBtn}
+          type="button"
+          onClick={onImportProjectClick}
+          disabled={!selectedProjectId || !canManageColumns}
+          title={!canManageColumns ? "Импорт доступен только администратору проекта" : undefined}
+        >
           Импорт JSON
         </button>
 
