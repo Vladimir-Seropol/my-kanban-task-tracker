@@ -23,6 +23,9 @@
 
 .columns {
   display: flex;
+}
+
+.columnsWithFilters {
   margin-top: 75px;
 }
 

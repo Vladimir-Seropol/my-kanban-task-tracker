@@ -1,6 +1,6 @@
 :root {
-  --board-panel-top-offset: 85px;
-  --board-column-height: calc(100vh - 150px);
+  --board-panel-top-offset: 50px;
+  --board-column-height: calc(100vh - 95px);
 }
 
 .app-loading {

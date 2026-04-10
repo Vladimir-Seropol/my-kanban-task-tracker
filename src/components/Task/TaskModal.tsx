@@ -22,6 +22,23 @@ export const TaskModal = ({
   canDeleteTask = true,
   onDelete,
 }: TaskModalProps & { onDelete?: (id: string) => void }) => {
+  const normalizeTag = (tag: string) => {
+    const clean = tag.trim().replace(/^#+/, "");
+    return clean ? `#${clean}` : "";
+  };
+
+  const parseTagsInput = (value: string) =>
+    value
+      .split(",")
+      .map(normalizeTag)
+      .filter(Boolean);
+
+  const tagsToInput = (tags?: string[]) =>
+    (tags ?? [])
+      .map(normalizeTag)
+      .filter(Boolean)
+      .join(", ");
+
   const [isEditingViewTask, setIsEditingViewTask] = useState(false);
   const localMode: Mode =
     mode === "create" ? "create" : isEditingViewTask ? "edit" : "view";
@@ -50,10 +67,14 @@ export const TaskModal = ({
   );
 
   const [form, setForm] = useState<Task>(defaultTask);
+  const [tagsInput, setTagsInput] = useState<string>(tagsToInput(defaultTask.tags));
 
   useEffect(() => {
     if (!isOpen) return;
-    requestAnimationFrame(() => setForm(defaultTask));
+    requestAnimationFrame(() => {
+      setForm(defaultTask);
+      setTagsInput(tagsToInput(defaultTask.tags));
+    });
   }, [isOpen, defaultTask]);
 
   const handleClose = useCallback(() => {
@@ -254,16 +275,13 @@ export const TaskModal = ({
 
             <input
               className={styles.input}
-              value={(form.tags ?? []).join(", ")}
-              onChange={(e) =>
-                handleChange(
-                  "tags",
-                  e.target.value
-                    .split(",")
-                    .map((tag) => tag.trim())
-                    .filter(Boolean)
-                )
-              }
+              value={tagsInput}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setTagsInput(raw);
+                handleChange("tags", parseTagsInput(raw));
+              }}
+              onBlur={() => setTagsInput(tagsToInput(parseTagsInput(tagsInput)))}
               placeholder="Теги (через запятую)"
             />
 
@@ -292,7 +310,7 @@ export const TaskModal = ({
               <Button
                 onClick={() => {
                   setIsEditingViewTask(false);
-                  onSubmit(form);
+                  onSubmit({ ...form, tags: parseTagsInput(tagsInput) });
                 }}
                 disabled={!canSubmit}
                 variant="primary"

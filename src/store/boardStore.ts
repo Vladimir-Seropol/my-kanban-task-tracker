@@ -118,6 +118,8 @@ const mapUITaskToApi = (task: Task): TaskApi => ({
 });
 
 let loadBoardInFlight: Promise<void> | null = null;
+const loadRoleInFlight = new Map<string, Promise<void>>();
+const loadMembersInFlight = new Map<string, Promise<void>>();
 const roleToPermissions = (role: ProjectRole): ProjectPermissions => ({
     canManageProjects: role === "admin",
     canManageColumns: role === "admin",
@@ -179,21 +181,44 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     loadProjectRole: async (projectId) => {
-        const role = await fetchProjectRoleApi(projectId);
-        set({
-            projectRole: role,
-            projectPermissions: roleToPermissions(role),
+        const existing = loadRoleInFlight.get(projectId);
+        if (existing) {
+            await existing;
+            return;
+        }
+
+        const req = (async () => {
+            const role = await fetchProjectRoleApi(projectId);
+            set({
+                projectRole: role,
+                projectPermissions: roleToPermissions(role),
+            });
+        })().finally(() => {
+            loadRoleInFlight.delete(projectId);
         });
+
+        loadRoleInFlight.set(projectId, req);
+        await req;
     },
 
     loadProjectMembers: async (projectId) => {
+        const existing = loadMembersInFlight.get(projectId);
+        if (existing) {
+            await existing;
+            return;
+        }
+
         set({ isMembersLoading: true });
-        try {
+        const req = (async () => {
             const members = await fetchProjectMembersApi(projectId);
             set({ projectMembers: members });
-        } finally {
+        })().finally(() => {
             set({ isMembersLoading: false });
-        }
+            loadMembersInFlight.delete(projectId);
+        });
+
+        loadMembersInFlight.set(projectId, req);
+        await req;
     },
 
     addProjectMember: async (projectId, userId, role = "member") => {

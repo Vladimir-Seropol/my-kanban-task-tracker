@@ -16,6 +16,7 @@ import { BoardSkeleton } from "../ui/BoardSkeleton";
 import { Button } from "../ui/Button/Button";
 import { BoardHeader } from "./BoardHeader";
 import { BoardModals } from "./BoardModals";
+import { BoardFilters, type BoardFiltersValue } from "./BoardFilters";
 import styles from "./Board.module.css";
 import { toast } from "sonner";
 
@@ -70,6 +71,13 @@ export const Board = ({ projectId }: BoardProps) => {
     const [isBoardLoaded, setIsBoardLoaded] = useState(false);
     const [didAutoOpenColumnModal, setDidAutoOpenColumnModal] = useState(false);
     const [trashOpen, setTrashOpen] = useState(false);
+    const [filters, setFilters] = useState<BoardFiltersValue>({
+        q: "",
+        assignee: "",
+        tags: "",
+        priority: "all",
+        due: "all",
+    });
 
     
     // EFFECTS
@@ -95,6 +103,93 @@ export const Board = ({ projectId }: BoardProps) => {
     
     // HELPERS
         const getTask = (id: string) => tasksById[id];
+
+    const normalize = (s: string) => s.trim().toLowerCase();
+    const normalizeTag = (s: string) => {
+        const clean = normalize(s).replace(/^#+/, "");
+        return clean ? `#${clean}` : "";
+    };
+    const parseTags = (s: string) =>
+        s
+            .split(",")
+            .map((t) => normalizeTag(t))
+            .filter(Boolean);
+
+    const isToday = (d: Date) => {
+        const t = new Date();
+        t.setHours(0, 0, 0, 0);
+        const x = new Date(d);
+        x.setHours(0, 0, 0, 0);
+        return x.getTime() === t.getTime();
+    };
+
+    const isThisWeek = (d: Date) => {
+        const now = new Date();
+        const day = (now.getDay() + 6) % 7; // monday=0
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        start.setDate(now.getDate() - day);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 7);
+        return d >= start && d < end;
+    };
+
+    const matchesFilters = (task: Task) => {
+        const q = normalize(filters.q);
+        if (q) {
+            const hay = [
+                task.text,
+                task.description,
+                task.source ?? "",
+                task.epic ?? "",
+                (task.tags ?? []).join(" "),
+            ]
+                .join(" ")
+                .toLowerCase();
+            if (!hay.includes(q)) return false;
+        }
+
+        const assignee = normalize(filters.assignee);
+        if (assignee) {
+            if (!normalize(task.assignee).includes(assignee)) return false;
+        }
+
+        if (filters.priority !== "all") {
+            if (task.priority !== filters.priority) return false;
+        }
+
+        const wantTags = parseTags(filters.tags);
+        if (wantTags.length > 0) {
+            const got = (task.tags ?? []).map((t) => normalizeTag(t)).filter(Boolean);
+            // Multiple tags are AND; each tag token matches by partial includes.
+            if (!wantTags.every((needle) => got.some((tag) => tag.includes(needle)))) return false;
+        }
+
+        if (filters.due !== "all") {
+            const dueRaw = task.dueDate;
+            if (filters.due === "no_due") return !dueRaw;
+            if (!dueRaw) return false;
+            const due = new Date(dueRaw);
+            if (Number.isNaN(due.getTime())) return false;
+
+            const today0 = new Date();
+            today0.setHours(0, 0, 0, 0);
+            const due0 = new Date(due);
+            due0.setHours(0, 0, 0, 0);
+
+            if (filters.due === "overdue") return due0.getTime() < today0.getTime();
+            if (filters.due === "today") return isToday(due0);
+            if (filters.due === "this_week") return isThisWeek(due0);
+        }
+
+        return true;
+    };
+
+    const allTasksCount = Object.keys(tasksById).length;
+    const visibleTasksCount = Object.values(tasksById).reduce(
+        (acc, t) => acc + (matchesFilters(t) ? 1 : 0),
+        0
+    );
 
     const handleOpenEditTask = (taskId: string) => {
         const task = getTask(taskId);
@@ -179,6 +274,22 @@ export const Board = ({ projectId }: BoardProps) => {
                 onOpenTrash={() => setTrashOpen(true)}
             />
 
+            <BoardFilters
+                value={filters}
+                onChange={setFilters}
+                onClear={() =>
+                    setFilters({
+                        q: "",
+                        assignee: "",
+                        tags: "",
+                        priority: "all",
+                        due: "all",
+                    })
+                }
+                totalVisible={visibleTasksCount}
+                totalAll={allTasksCount}
+            />
+
             {/* COLUMNS */}
             {columnOrder.length === 0 ? (
                 <div className={styles.emptyBoard}>
@@ -199,12 +310,15 @@ export const Board = ({ projectId }: BoardProps) => {
                     )}
                 </div>
             ) : (
-                <div className={styles.columns}>
+                <div className={`${styles.columns} ${styles.columnsWithFilters}`}>
                     {columnOrder.map((columnId) => {
                     const column = columnsById[columnId];
                     if (!column) return null;
 
-                    const tasks: Task[] = column.taskIds.map((id) => getTask(id)).filter(Boolean);
+                    const tasks: Task[] = column.taskIds
+                        .map((id) => getTask(id))
+                        .filter(Boolean)
+                        .filter((t) => matchesFilters(t as Task));
 
                     return (
                         <Column

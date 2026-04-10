@@ -355,9 +355,10 @@ export const deleteProjectApi = async (projectId: string): Promise<void> => {
 export const fetchProjectRoleApi = async (
   projectId: string
 ): Promise<ProjectRole> => {
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  const userId = authData.user?.id;
+  // getSession() reads cached session and avoids extra auth lock contention from getUser() in dev StrictMode.
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const userId = sessionData.session?.user?.id;
   if (!userId) return "member";
 
   const { data: project, error: projectError } = await supabase
