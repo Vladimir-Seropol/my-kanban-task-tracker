@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
     FixedSizeList as List,
     type ListChildComponentProps,
@@ -16,9 +16,12 @@ import { Task } from "../Task/Task";
 import styles from "./Column.module.css";
 
 import type { ColumnProps, RowData } from "../../types/types";
+import { TASK_DESCRIPTION_PREVIEW_CLOSE_EVENT } from "../Task/taskDescriptionPreviewEvents";
 
-/* Must match .task height in Task.module.css + vertical .row padding in Column.module.css */
-const ITEM_HEIGHT = 104;
+/* Must match .task height in Task.module.css + vertical .row padding in Column.module.css (2px + 2px) */
+const ITEM_HEIGHT = 124;
+const LIST_MIN_HEIGHT = 160;
+const LIST_MIN_WIDTH = 200;
 const LIST_BOTTOM_PADDING = 16;
 
 const VirtualListInner = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
@@ -27,8 +30,9 @@ const VirtualListInner = React.forwardRef<HTMLDivElement, React.HTMLAttributes<H
             ref={ref}
             style={{
                 ...style,
+                /* content-box: padding is added to react-window height so rows keep full ITEM_HEIGHT and scroll reaches the last card */
+                boxSizing: "content-box",
                 paddingBottom: LIST_BOTTOM_PADDING,
-                boxSizing: "border-box",
             }}
             {...rest}
         />
@@ -86,6 +90,27 @@ export const Column = ({
 
     const hasTasks = column.tasks.length > 0;
 
+    const listWrapRef = useRef<HTMLDivElement>(null);
+    const [listSize, setListSize] = useState({ height: 400, width: 260 });
+
+    useLayoutEffect(() => {
+        const el = listWrapRef.current;
+        if (!el) return;
+
+        const apply = () => {
+            const r = el.getBoundingClientRect();
+            setListSize({
+                height: Math.max(LIST_MIN_HEIGHT, Math.floor(r.height)),
+                width: Math.max(LIST_MIN_WIDTH, Math.floor(r.width)),
+            });
+        };
+
+        apply();
+        const ro = new ResizeObserver(apply);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [hasTasks]);
+
     return (
         <div ref={setNodeRef} className={styles.column}>
             {/* HEADER */}
@@ -126,19 +151,25 @@ export const Column = ({
                             {isOver && <span>Перетащите задачу сюда</span>}
                         </div>
                     ) : (
-                        <List
-                            height={500}
-                            width={280}
-                            itemCount={column.tasks.length}
-                            itemSize={ITEM_HEIGHT}
-                            itemData={itemData}
-                            itemKey={(index) => column.tasks[index].id}
-                            className={styles.list}
-                            innerElementType={VirtualListInner}
-                        >
-                            {Row}
-                        </List>
-
+                        <div ref={listWrapRef} className={styles.listWrap}>
+                            <List
+                                height={listSize.height}
+                                width={listSize.width}
+                                itemCount={column.tasks.length}
+                                itemSize={ITEM_HEIGHT}
+                                itemData={itemData}
+                                itemKey={(index) => column.tasks[index].id}
+                                className={styles.list}
+                                innerElementType={VirtualListInner}
+                                onScroll={() => {
+                                    window.dispatchEvent(
+                                        new CustomEvent(TASK_DESCRIPTION_PREVIEW_CLOSE_EVENT)
+                                    );
+                                }}
+                            >
+                                {Row}
+                            </List>
+                        </div>
                     )}
                 </SortableContext>
             )}

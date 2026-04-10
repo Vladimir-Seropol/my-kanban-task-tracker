@@ -13,6 +13,7 @@ export const TaskOverlay = ({ task }: TaskOverlayProps) => {
     <TaskCardContent
       task={task}
       className={taskStyles.overlay}
+      isDragging
       dragHandle={<div className={taskStyles.dragHandle}></div>}
     />
   );

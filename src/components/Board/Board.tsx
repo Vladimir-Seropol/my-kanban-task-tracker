@@ -253,117 +253,124 @@ export const Board = ({ projectId }: BoardProps) => {
         if (!isBoardLoaded) return <BoardSkeleton />;
 
     return (
-        <DndContext
-            sensors={sensors}
-            collisionDetection={rectIntersection}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-        >
-            <BoardHeader
-                canManageColumns={projectPermissions.canManageColumns}
-                onCreateTask={() =>
-                    setTaskModal({
-                        isOpen: true,
-                        mode: "create",
-                        text: "",
-                        columnId: columnOrder[0] ?? "",
-                        taskId: null,
-                    })
-                }
-                onCreateColumn={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
-                onOpenTrash={() => setTrashOpen(true)}
-            />
+        <div className={styles.boardPage}>
+            <DndContext
+                sensors={sensors}
+                collisionDetection={rectIntersection}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+            >
+                <div className={styles.boardLayout}>
+                    <BoardHeader
+                        canManageColumns={projectPermissions.canManageColumns}
+                        onCreateTask={() =>
+                            setTaskModal({
+                                isOpen: true,
+                                mode: "create",
+                                text: "",
+                                columnId: columnOrder[0] ?? "",
+                                taskId: null,
+                            })
+                        }
+                        onCreateColumn={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
+                        onOpenTrash={() => setTrashOpen(true)}
+                    />
 
-            <BoardFilters
-                value={filters}
-                onChange={setFilters}
-                onClear={() =>
-                    setFilters({
-                        q: "",
-                        assignee: "",
-                        tags: "",
-                        priority: "all",
-                        due: "all",
-                    })
-                }
-                totalVisible={visibleTasksCount}
-                totalAll={allTasksCount}
-            />
+                    <BoardFilters
+                        value={filters}
+                        onChange={setFilters}
+                        onClear={() =>
+                            setFilters({
+                                q: "",
+                                assignee: "",
+                                tags: "",
+                                priority: "all",
+                                due: "all",
+                            })
+                        }
+                        totalVisible={visibleTasksCount}
+                        totalAll={allTasksCount}
+                    />
 
-            {/* COLUMNS */}
-            {columnOrder.length === 0 ? (
-                <div className={styles.emptyBoard}>
-                    {projectPermissions.canManageColumns ? (
-                        <>
-                            <p className={styles.emptyText}>В проекте пока нет колонок.</p>
-                            <Button
-                                variant="primary"
-                                onClick={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
-                            >
-                                + Создать первую колонку
-                            </Button>
-                        </>
+                    {/* COLUMNS */}
+                    {columnOrder.length === 0 ? (
+                        <div className={styles.emptyBoard}>
+                            {projectPermissions.canManageColumns ? (
+                                <>
+                                    <p className={styles.emptyText}>В проекте пока нет колонок.</p>
+                                    <Button
+                                        variant="primary"
+                                        onClick={() =>
+                                            setColumnModal({ isOpen: true, title: "", editingId: null })
+                                        }
+                                    >
+                                        + Создать первую колонку
+                                    </Button>
+                                </>
+                            ) : (
+                                <p className={styles.emptyText}>
+                                    Админ еще не настроил структуру проекта. Колонки появятся после настройки.
+                                </p>
+                            )}
+                        </div>
                     ) : (
-                        <p className={styles.emptyText}>
-                            Админ еще не настроил структуру проекта. Колонки появятся после настройки.
-                        </p>
+                        <div className={`${styles.columns} ${styles.columnsWithFilters}`}>
+                            {columnOrder.map((columnId) => {
+                                const column = columnsById[columnId];
+                                if (!column) return null;
+
+                                const tasks: Task[] = column.taskIds
+                                    .map((id) => getTask(id))
+                                    .filter(Boolean)
+                                    .filter((t) => matchesFilters(t as Task));
+
+                                return (
+                                    <Column
+                                        key={column.id}
+                                        column={{ id: column.id, title: column.title, tasks }}
+                                        onOpenTaskEditor={handleOpenEditTask}
+                                        onDeleteTask={setDeleteTaskId}
+                                        onEditColumn={(id) =>
+                                            setColumnModal({ isOpen: true, title: column.title, editingId: id })
+                                        }
+                                        onDeleteColumn={setDeleteColumnId}
+                                        canManageColumns={projectPermissions.canManageColumns}
+                                    />
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
-            ) : (
-                <div className={`${styles.columns} ${styles.columnsWithFilters}`}>
-                    {columnOrder.map((columnId) => {
-                    const column = columnsById[columnId];
-                    if (!column) return null;
 
-                    const tasks: Task[] = column.taskIds
-                        .map((id) => getTask(id))
-                        .filter(Boolean)
-                        .filter((t) => matchesFilters(t as Task));
+                <DragOverlay>{activeTask && <TaskOverlay task={activeTask} />}</DragOverlay>
 
-                    return (
-                        <Column
-                            key={column.id}
-                            column={{ id: column.id, title: column.title, tasks }}
-                            onOpenTaskEditor={handleOpenEditTask}
-                            onDeleteTask={setDeleteTaskId}
-                            onEditColumn={(id) => setColumnModal({ isOpen: true, title: column.title, editingId: id })}
-                            onDeleteColumn={setDeleteColumnId}
-                            canManageColumns={projectPermissions.canManageColumns}
-                        />
-                    );
-                    })}
-                </div>
-            )}
-
-            {/* DRAG OVERLAY */}
-            <DragOverlay>{activeTask && <TaskOverlay task={activeTask} />}</DragOverlay>
-
-            <BoardModals
-                projectId={projectId}
-                trashOpen={trashOpen}
-                onCloseTrash={() => setTrashOpen(false)}
-                onRestoredFromTrash={() => void loadBoard(projectId)}
-                deleteTaskId={deleteTaskId}
-                deleteColumnId={deleteColumnId}
-                taskModal={taskModal}
-                columnModal={columnModal}
-                canDeleteTask={projectPermissions.canDeleteTasks}
-                columnOrder={columnOrder}
-                columnsById={columnsById}
-                getTask={getTask}
-                setDeleteTaskId={setDeleteTaskId}
-                setDeleteColumnId={setDeleteColumnId}
-                setTaskModal={setTaskModal}
-                setColumnModal={setColumnModal}
-                deleteTask={deleteTask}
-                deleteColumn={deleteColumn}
-                createTask={createTask}
-                editTask={editTask}
-                createColumn={createColumn}
-                editColumn={editColumn}
-                getErrorMessage={getErrorMessage}
-                onError={(message) => toast.error(message)}
-            />
-        </DndContext>
+                <BoardModals
+                    projectId={projectId}
+                    trashOpen={trashOpen}
+                    onCloseTrash={() => setTrashOpen(false)}
+                    onRestoredFromTrash={() => void loadBoard(projectId)}
+                    deleteTaskId={deleteTaskId}
+                    deleteColumnId={deleteColumnId}
+                    taskModal={taskModal}
+                    columnModal={columnModal}
+                    canDeleteTask={projectPermissions.canDeleteTasks}
+                    columnOrder={columnOrder}
+                    columnsById={columnsById}
+                    getTask={getTask}
+                    setDeleteTaskId={setDeleteTaskId}
+                    setDeleteColumnId={setDeleteColumnId}
+                    setTaskModal={setTaskModal}
+                    setColumnModal={setColumnModal}
+                    deleteTask={deleteTask}
+                    deleteColumn={deleteColumn}
+                    createTask={createTask}
+                    editTask={editTask}
+                    createColumn={createColumn}
+                    editColumn={editColumn}
+                    getErrorMessage={getErrorMessage}
+                    onError={(message) => toast.error(message)}
+                />
+            </DndContext>
+        </div>
     );
 };

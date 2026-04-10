@@ -1,5 +1,5 @@
 .task {
-  height: 100px;
+  height: 120px;
   padding: 6px 8px;
   background: white;
   border-radius: 6px;
@@ -211,4 +211,54 @@
   font-weight: 600;
   color: #6b5c89;
   padding: 1px 0;
+}
+
+/* Floating description on hover (portal → body; avoids column overflow clip) */
+.descriptionHoverCard {
+  position: fixed;
+  z-index: 4500;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  border: 1px solid #e8e4f0;
+  border-radius: 8px;
+  box-shadow:
+    0 16px 48px rgba(47, 37, 68, 0.16),
+    0 4px 14px rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: #4a3b65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: auto;
+  animation: taskDescPreviewIn 0.14s ease-out;
+}
+
+.descriptionHoverCardAbove {
+  animation: taskDescPreviewInAbove 0.14s ease-out;
+}
+
+@keyframes taskDescPreviewIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes taskDescPreviewInAbove {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

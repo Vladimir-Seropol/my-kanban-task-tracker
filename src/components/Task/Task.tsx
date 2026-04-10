@@ -31,6 +31,7 @@ const TaskComponent = ({ task, index, onOpenEditor }: TaskProps) => {
         <div ref={setNodeRef} style={style}>
             <TaskCardContent
                 task={task}
+                isDragging={isDragging}
                 onClick={() => onOpenEditor(task.id)}
                 dragHandle={<div {...attributes} {...listeners} className={styles.dragHandle}></div>}
             />

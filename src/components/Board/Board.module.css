@@ -1,3 +1,22 @@
+/* Fills .app-main (flex); DndContext may not forward flex to a single DOM node */
+.boardPage {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.boardLayout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  /* Clear fixed BoardHeader; filters height then defines remaining space for columns */
+  padding-top: 72px;
+}
+
 .header {
   display: flex;
   justify-content: center;
@@ -23,13 +42,16 @@
 
 .columns {
   display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 8px;
 }
 
 .columnsWithFilters {
-  margin-top: 75px;
+  margin-top: 0;
 }
 
 .error {
@@ -51,6 +73,10 @@
 }
 
 @media (max-width: 1024px) {
+  .boardLayout {
+    padding-top: 100px;
+  }
+
   .header {
     gap: 10px;
     padding: 12px 10px 0;
@@ -63,13 +89,13 @@
   .title {
     font-size: 24px;
   }
-
-  .columnsWithFilters {
-    margin-top: 110px;
-  }
 }
 
 @media (max-width: 768px) {
+  .boardLayout {
+    padding-top: 0;
+  }
+
   .header {
     position: sticky;
     top: 0;
@@ -82,10 +108,6 @@
     order: -1;
     width: 100%;
     margin-bottom: 4px;
-  }
-
-  .columnsWithFilters {
-    margin-top: 0;
   }
 
   .emptyBoard {
