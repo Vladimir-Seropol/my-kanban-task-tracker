@@ -12,12 +12,10 @@ import { useEffect, useState } from "react";
 
 import { Column } from "../Column/Column";
 import { TaskOverlay } from "../../components/Task/TaskOverlay";
-import { TaskModal } from "../../components/Task/TaskModal";
-import { ColumnModal } from "../Column/ColumnModal";
-import { ConfirmModal } from "../Column/ConfirmModal";
 import { BoardSkeleton } from "../ui/BoardSkeleton";
 import { Button } from "../ui/Button/Button";
-import { TrashModal } from "./TrashModal";
+import { BoardHeader } from "./BoardHeader";
+import { BoardModals } from "./BoardModals";
 import styles from "./Board.module.css";
 import { toast } from "sonner";
 
@@ -166,40 +164,20 @@ export const Board = ({ projectId }: BoardProps) => {
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
         >
-            {/* HEADER */}
-            <div className={styles.header}>
-                <Button
-                    variant="primary"
-                    onClick={() =>
-                        setTaskModal({
-                            isOpen: true,
-                            mode: "create",
-                            text: "",
-                            columnId: columnOrder[0] ?? "",
-                            taskId: null
-                        })
-                    }
-                >
-                    + Добавить задачу
-                </Button>
-
-                <h1 className={styles.title}>Доска</h1>
-
-                {projectPermissions.canManageColumns && (
-                    <>
-                        <Button
-                            variant="primary"
-                            onClick={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
-                        >
-                            + Добавить колонку
-                        </Button>
-                        <Button variant="secondary" onClick={() => setTrashOpen(true)}>
-                            Корзина
-                        </Button>
-                    </>
-                )}
-
-            </div>
+            <BoardHeader
+                canManageColumns={projectPermissions.canManageColumns}
+                onCreateTask={() =>
+                    setTaskModal({
+                        isOpen: true,
+                        mode: "create",
+                        text: "",
+                        columnId: columnOrder[0] ?? "",
+                        taskId: null,
+                    })
+                }
+                onCreateColumn={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
+                onOpenTrash={() => setTrashOpen(true)}
+            />
 
             {/* COLUMNS */}
             {columnOrder.length === 0 ? (
@@ -246,102 +224,31 @@ export const Board = ({ projectId }: BoardProps) => {
             {/* DRAG OVERLAY */}
             <DragOverlay>{activeTask && <TaskOverlay task={activeTask} />}</DragOverlay>
 
-            {/* DELETE TASK */}
-            <TrashModal
+            <BoardModals
                 projectId={projectId}
-                isOpen={trashOpen}
-                onClose={() => setTrashOpen(false)}
-                onRestored={() => void loadBoard(projectId)}
-            />
-
-            <ConfirmModal
-                isOpen={!!deleteTaskId}
-                title="Удалить задачу?"
-                description={
-                    deleteTaskId
-                        ? `Переместить в корзину задачу «${getTask(deleteTaskId)?.text}»? (можно восстановить)`
-                        : ""
-                }
-                onClose={() => setDeleteTaskId(null)}
-                onConfirm={async () => {
-                    try {
-                        if (deleteTaskId) await deleteTask(deleteTaskId);
-                    } catch (error) {
-                        console.error(error);
-                        toast.error(getErrorMessage(error, "Не удалось удалить задачу"));
-                    }
-                    setDeleteTaskId(null);
-                }}
-            />
-
-            {/* DELETE COLUMN */}
-            <ConfirmModal
-                isOpen={!!deleteColumnId}
-                title="Удалить колонку?"
-                description="Переместить колонку и её задачи в корзину? (восстановление — из корзины)"
-                onClose={() => setDeleteColumnId(null)}
-                onConfirm={async () => {
-                    try {
-                        if (deleteColumnId) await deleteColumn(deleteColumnId);
-                    } catch (error) {
-                        console.error(error);
-                        toast.error(getErrorMessage(error, "Не удалось удалить колонку"));
-                    }
-                    setDeleteColumnId(null);
-                }}
-            />
-
-            {/* COLUMN MODAL */}
-            <ColumnModal
-                isOpen={columnModal.isOpen}
-                mode={columnModal.editingId ? "edit" : "create"}
-                title={columnModal.title}
-                onTitleChange={(title) => setColumnModal((prev) => ({ ...prev, title }))}
-                onClose={() => setColumnModal({ isOpen: false, title: "", editingId: null })}
-                onSubmit={async () => {
-                    try {
-                        if (columnModal.editingId) await editColumn(columnModal.editingId, { title: columnModal.title });
-                        else await createColumn({ id: crypto.randomUUID(), title: columnModal.title, taskIds: [] });
-                        setColumnModal({ isOpen: false, title: "", editingId: null });
-                    } catch (error) {
-                        console.error(error);
-                        toast.error(getErrorMessage(error, "Не удалось сохранить колонку"));
-                    }
-                }}
-            />
-
-            {/* TASK MODAL */}
-            <TaskModal
-                isOpen={taskModal.isOpen}
-                mode={taskModal.mode}
-                columns={columnOrder.flatMap((id) => {
-                    const col = columnsById[id];
-                    if (!col) return [];
-
-                    const tasks = col.taskIds
-                        .map((tid) => getTask(tid))
-                        .filter(Boolean);
-
-                    return [{ id: col.id, title: col.title, tasks }];
-                })}
-                text={taskModal.text}
-                columnId={taskModal.columnId}
-                task={taskModal.taskId ? getTask(taskModal.taskId) : undefined}
-                onTextChange={(text) => setTaskModal((prev) => ({ ...prev, text }))}
-                onColumnChange={(columnId) => setTaskModal((prev) => ({ ...prev, columnId }))}
-                onClose={() => setTaskModal((prev) => ({ ...prev, isOpen: false }))}
-                onDelete={(id) => setDeleteTaskId(id)}
+                trashOpen={trashOpen}
+                onCloseTrash={() => setTrashOpen(false)}
+                onRestoredFromTrash={() => void loadBoard(projectId)}
+                deleteTaskId={deleteTaskId}
+                deleteColumnId={deleteColumnId}
+                taskModal={taskModal}
+                columnModal={columnModal}
                 canDeleteTask={projectPermissions.canDeleteTasks}
-                onSubmit={async (task) => {
-                    try {
-                        if (taskModal.taskId) await editTask(task.id, { ...task });
-                        else await createTask(task);
-                        setTaskModal({ isOpen: false, mode: "create", text: "", columnId: columnOrder[0] ?? "", taskId: null });
-                    } catch (error) {
-                        console.error(error);
-                        toast.error(getErrorMessage(error, "Не удалось сохранить задачу"));
-                    }
-                }}
+                columnOrder={columnOrder}
+                columnsById={columnsById}
+                getTask={getTask}
+                setDeleteTaskId={setDeleteTaskId}
+                setDeleteColumnId={setDeleteColumnId}
+                setTaskModal={setTaskModal}
+                setColumnModal={setColumnModal}
+                deleteTask={deleteTask}
+                deleteColumn={deleteColumn}
+                createTask={createTask}
+                editTask={editTask}
+                createColumn={createColumn}
+                editColumn={editColumn}
+                getErrorMessage={getErrorMessage}
+                onError={(message) => toast.error(message)}
             />
         </DndContext>
     );
