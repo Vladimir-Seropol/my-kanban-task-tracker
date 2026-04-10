@@ -141,7 +141,7 @@
 .projectsList {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   gap: 6px;
   overflow: auto;
@@ -195,16 +195,18 @@
 }
 
 .membersBlock {
+  display: flex;
+  flex-direction: column;
   margin-top: 10px;
   border-top: 1px solid #e9e3f7;
   padding-top: 10px;
+  min-width: 0;
 }
 
 .membersHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
   color: #4a3b65;
   font-weight: 600;
 }
@@ -212,7 +214,10 @@
 .membersList {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: 6px;
+  overflow: auto;
 }
 
 .memberItem {

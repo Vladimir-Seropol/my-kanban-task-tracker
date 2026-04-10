@@ -45,6 +45,8 @@ type ProjectMemberRow = {
   user_id: string;
   role: ProjectRole;
   created_at: string;
+  email?: string | null;
+  full_name?: string | null;
 };
 
 type ProjectMemberRoleRow = {
@@ -52,9 +54,25 @@ type ProjectMemberRoleRow = {
 };
 
 /** PostgREST: RPC ещё не создана в БД (миграция не применена). */
-const isRpcMissingError = (error: { code?: string; message?: string }) =>
-  error.code === "PGRST202" ||
-  (typeof error.message === "string" && error.message.includes("Could not find the function"));
+const isRpcMissingError = (error: {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+}) => {
+  const fullText = [error.message, error.details, error.hint]
+    .filter((v): v is string => typeof v === "string")
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    error.code === "PGRST202" ||
+    error.code === "42883" ||
+    fullText.includes("could not find the function") ||
+    fullText.includes("function") && fullText.includes("does not exist") ||
+    fullText.includes("not found")
+  );
+};
 
 const mapTaskRowToApi = (row: TaskRow): TaskApi => ({
   id: row.id,
@@ -188,14 +206,8 @@ export const deleteTaskApi = async (taskId: string): Promise<void> => {
     p_task_id: taskId,
   });
   if (!rpc.error) return;
-  if (!isRpcMissingError(rpc.error)) throw rpc.error;
-
-  const now = new Date().toISOString();
-  const { error } = await supabase
-    .from("tasks")
-    .update({ deleted_at: now })
-    .eq("id", taskId);
-  if (error) throw error;
+  if (isRpcMissingError(rpc.error)) throw new Error("SOFT_DELETE_TASK_RPC_MISSING");
+  throw rpc.error;
 };
 
 // COLUMNS
@@ -244,21 +256,8 @@ export const deleteColumnApi = async (columnId: string) => {
     p_column_id: columnId,
   });
   if (!rpc.error) return;
-  if (!isRpcMissingError(rpc.error)) throw rpc.error;
-
-  const now = new Date().toISOString();
-  const { error: tasksError } = await supabase
-    .from("tasks")
-    .update({ deleted_at: now })
-    .eq("column_id", columnId)
-    .is("deleted_at", null);
-  if (tasksError) throw tasksError;
-
-  const { error } = await supabase
-    .from("columns")
-    .update({ deleted_at: now })
-    .eq("id", columnId);
-  if (error) throw error;
+  if (isRpcMissingError(rpc.error)) throw new Error("SOFT_DELETE_COLUMN_RPC_MISSING");
+  throw rpc.error;
 };
 
 export type BoardExportData = {
@@ -378,8 +377,8 @@ export const fetchProjectRoleApi = async (
     .maybeSingle<ProjectMemberRoleRow>();
 
   if (memberError) {
-    // Backward compatibility before project_members migration is applied.
-    if (memberError.code === "42P01") return "admin";
+    // Fail closed: if role membership schema is missing, never auto-elevate user to admin.
+    if (memberError.code === "42P01") return "member";
     throw memberError;
   }
 
@@ -391,11 +390,21 @@ const mapProjectMemberRowToApi = (row: ProjectMemberRow): ProjectMember => ({
   userId: row.user_id,
   role: row.role,
   createdAt: row.created_at,
+  email: row.email ?? undefined,
+  fullName: row.full_name ?? undefined,
 });
 
 export const fetchProjectMembersApi = async (
   projectId: string
 ): Promise<ProjectMember[]> => {
+  const rpc = await supabase.rpc("list_project_members_detailed", {
+    p_project_id: projectId,
+  });
+  if (!rpc.error) {
+    return ((rpc.data ?? []) as ProjectMemberRow[]).map(mapProjectMemberRowToApi);
+  }
+  if (!isRpcMissingError(rpc.error)) throw rpc.error;
+
   const { data, error } = await supabase
     .from("project_members")
     .select("project_id, user_id, role, created_at")
@@ -449,6 +458,13 @@ export const removeProjectMemberApi = async (
   projectId: string,
   userId: string
 ): Promise<void> => {
+  const rpc = await supabase.rpc("remove_project_member", {
+    p_project_id: projectId,
+    p_user_id: userId,
+  });
+  if (!rpc.error) return;
+  if (!isRpcMissingError(rpc.error)) throw rpc.error;
+
   const { error } = await supabase
     .from("project_members")
     .delete()

@@ -6,6 +6,7 @@ import styles from "./AppSidebar.module.css";
 import { InputModal } from "../ui/InputModal/InputModal";
 import { ConfirmModal } from "../Column/ConfirmModal";
 import { toast } from "sonner";
+import { MembersModal } from "./MembersModal";
 
 type AppSidebarProps = {
   sidebarOpen: boolean;
@@ -83,7 +84,6 @@ export const AppSidebar = ({
   }, [userAvatarUrl]);
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null;
-
   const handleEditName = async (nextName: string) => {
     const trimmed = nextName.trim();
     if (!trimmed) return;
@@ -255,62 +255,14 @@ export const AppSidebar = ({
         </div>
         <div className={styles.membersBlock}>
           <div className={styles.membersHeader}>
-            <span>Участники</span>
-            {canManageProjects && (
-              <button
-                className={styles.smallBtn}
-                type="button"
-                disabled={!selectedProjectId}
-                onClick={() => setMemberModalOpen(true)}
-              >
-                + Участник
-              </button>
-            )}
-          </div>
-          <div className={styles.membersList}>
-            {membersLoading ? (
-              <>
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className={styles.skeletonRow} />
-                ))}
-              </>
-            ) : (
-              members
-                .filter((member) => member.projectId === selectedProjectId)
-                .map((member) => (
-                  <div key={member.userId} className={styles.memberItem}>
-                    <div className={styles.memberMain}>
-                      <span className={styles.memberId}>{member.userId}</span>
-                      <span className={styles.memberRole}>{member.role}</span>
-                    </div>
-                    {canManageProjects && (
-                      <div className={styles.memberActions}>
-                        <button
-                          className={styles.smallBtn}
-                          type="button"
-                          onClick={() => {
-                            void onUpdateMemberRole(
-                              member.userId,
-                              member.role === "admin" ? "member" : "admin"
-                            );
-                          }}
-                        >
-                          {member.role === "admin" ? "В member" : "В admin"}
-                        </button>
-                        <button
-                          className={`${styles.smallBtn} ${styles.smallDanger}`}
-                          type="button"
-                          onClick={() => {
-                            void onRemoveMember(member.userId);
-                          }}
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))
-            )}
+            <button
+              className={styles.smallBtn}
+              type="button"
+              disabled={!selectedProjectId}
+              onClick={() => setMemberModalOpen(true)}
+            >
+              Участники
+            </button>
           </div>
         </div>
       </div>
@@ -322,25 +274,28 @@ export const AppSidebar = ({
         <button className={styles.sidebarBtn} type="button" onClick={onExportProject} disabled={!selectedProjectId}>
           Экспорт JSON
         </button>
-        <button
-          className={styles.sidebarBtn}
-          type="button"
-          onClick={onImportProjectClick}
-          disabled={!selectedProjectId || !canManageColumns}
-          title={!canManageColumns ? "Импорт доступен только администратору проекта" : undefined}
-        >
-          Импорт JSON
-        </button>
+        {canManageColumns && (
+          <>
+            <button
+              className={styles.sidebarBtn}
+              type="button"
+              onClick={onImportProjectClick}
+              disabled={!selectedProjectId}
+            >
+              Импорт JSON
+            </button>
 
-        <input
-          className={styles.hiddenFileInput}
-          ref={importInputRef}
-          type="file"
-          accept="application/json"
-          onChange={(event) => {
-            void onImportProjectFile(event);
-          }}
-        />
+            <input
+              className={styles.hiddenFileInput}
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              onChange={(event) => {
+                void onImportProjectFile(event);
+              }}
+            />
+          </>
+        )}
       </div>
       <InputModal
         isOpen={nameModalOpen}
@@ -358,19 +313,6 @@ export const AppSidebar = ({
         onClose={() => setProjectRenameModalOpen(false)}
         onConfirm={handleRenameProject}
       />
-      <InputModal
-        isOpen={memberModalOpen}
-        title="Добавить участника"
-        label="Введите email участника"
-        onClose={() => setMemberModalOpen(false)}
-        onConfirm={async (value) => {
-          const email = value.trim().toLowerCase();
-          if (!email) return;
-          await onAddMemberByEmail(email, "member");
-          setMemberModalOpen(false);
-        }}
-        confirmText="Добавить"
-      />
       <ConfirmModal
         isOpen={Boolean(deleteProjectId)}
         title="Удалить проект?"
@@ -382,6 +324,17 @@ export const AppSidebar = ({
           void handleDeleteSelectedProject();
         }}
         variant="danger"
+      />
+      <MembersModal
+        isOpen={memberModalOpen}
+        currentUserId={userId}
+        canManageProjects={canManageProjects}
+        membersLoading={membersLoading}
+        members={members.filter((member) => member.projectId === selectedProjectId)}
+        onClose={() => setMemberModalOpen(false)}
+        onAddMemberByEmail={onAddMemberByEmail}
+        onUpdateMemberRole={onUpdateMemberRole}
+        onRemoveMember={onRemoveMember}
       />
     </aside>
   );

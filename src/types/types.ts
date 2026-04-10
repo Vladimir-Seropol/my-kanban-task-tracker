@@ -65,6 +65,8 @@ export type ProjectMember = {
   userId: string;
   role: ProjectRole;
   createdAt: string;
+  email?: string;
+  fullName?: string;
 };
 
 export type ID = string;
