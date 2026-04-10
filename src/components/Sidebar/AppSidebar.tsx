@@ -18,6 +18,8 @@ type AppSidebarProps = {
   projectRole: ProjectRole;
   canManageProjects: boolean;
   canManageColumns: boolean;
+  projectsLoading: boolean;
+  membersLoading: boolean;
   members: ProjectMember[];
   importInputRef: RefObject<HTMLInputElement>;
   onToggleSidebar: () => void;
@@ -44,6 +46,8 @@ export const AppSidebar = ({
   projectRole,
   canManageProjects,
   canManageColumns,
+  projectsLoading,
+  membersLoading,
   members,
   importInputRef,
   onToggleSidebar,
@@ -230,16 +234,24 @@ export const AppSidebar = ({
         </div>
 
         <div className={styles.projectsList}>
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              type="button"
-              className={`${styles.projectItem} ${selectedProjectId === project.id ? styles.projectItemActive : ""}`}
-              onClick={() => onSelectProject(project.id)}
-            >
-              {project.name}
-            </button>
-          ))}
+          {projectsLoading ? (
+            <>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className={styles.skeletonRow} />
+              ))}
+            </>
+          ) : (
+            projects.map((project) => (
+              <button
+                key={project.id}
+                type="button"
+                className={`${styles.projectItem} ${selectedProjectId === project.id ? styles.projectItemActive : ""}`}
+                onClick={() => onSelectProject(project.id)}
+              >
+                {project.name}
+              </button>
+            ))
+          )}
         </div>
         <div className={styles.membersBlock}>
           <div className={styles.membersHeader}>
@@ -256,41 +268,49 @@ export const AppSidebar = ({
             )}
           </div>
           <div className={styles.membersList}>
-            {members
-              .filter((member) => member.projectId === selectedProjectId)
-              .map((member) => (
-                <div key={member.userId} className={styles.memberItem}>
-                  <div className={styles.memberMain}>
-                    <span className={styles.memberId}>{member.userId}</span>
-                    <span className={styles.memberRole}>{member.role}</span>
-                  </div>
-                  {canManageProjects && (
-                    <div className={styles.memberActions}>
-                      <button
-                        className={styles.smallBtn}
-                        type="button"
-                        onClick={() => {
-                          void onUpdateMemberRole(
-                            member.userId,
-                            member.role === "admin" ? "member" : "admin"
-                          );
-                        }}
-                      >
-                        {member.role === "admin" ? "В member" : "В admin"}
-                      </button>
-                      <button
-                        className={`${styles.smallBtn} ${styles.smallDanger}`}
-                        type="button"
-                        onClick={() => {
-                          void onRemoveMember(member.userId);
-                        }}
-                      >
-                        Удалить
-                      </button>
+            {membersLoading ? (
+              <>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className={styles.skeletonRow} />
+                ))}
+              </>
+            ) : (
+              members
+                .filter((member) => member.projectId === selectedProjectId)
+                .map((member) => (
+                  <div key={member.userId} className={styles.memberItem}>
+                    <div className={styles.memberMain}>
+                      <span className={styles.memberId}>{member.userId}</span>
+                      <span className={styles.memberRole}>{member.role}</span>
                     </div>
-                  )}
-                </div>
-              ))}
+                    {canManageProjects && (
+                      <div className={styles.memberActions}>
+                        <button
+                          className={styles.smallBtn}
+                          type="button"
+                          onClick={() => {
+                            void onUpdateMemberRole(
+                              member.userId,
+                              member.role === "admin" ? "member" : "admin"
+                            );
+                          }}
+                        >
+                          {member.role === "admin" ? "В member" : "В admin"}
+                        </button>
+                        <button
+                          className={`${styles.smallBtn} ${styles.smallDanger}`}
+                          type="button"
+                          onClick={() => {
+                            void onRemoveMember(member.userId);
+                          }}
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+            )}
           </div>
         </div>
       </div>

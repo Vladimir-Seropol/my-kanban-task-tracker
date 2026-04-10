@@ -5,6 +5,7 @@ import { AuthPage } from "./components/Auth/AuthPage";
 import { supabase } from "./lib/supabase";
 import { AppSidebar } from "./components/Sidebar/AppSidebar";
 import { InputModal } from "./components/ui/InputModal/InputModal";
+import { AppShellSkeleton } from "./components/ui/AppShellSkeleton";
 import type { Session } from "@supabase/supabase-js";
 import type { ProjectRole, TaskApi } from "./types/types";
 import { useBoardStore } from "./store/boardStore";
@@ -24,6 +25,8 @@ export default function App() {
     projectRole,
     projectPermissions,
     projectMembers,
+    isProjectsLoading,
+    isMembersLoading,
     loadProjects,
     selectProject,
     createProject,
@@ -75,7 +78,7 @@ export default function App() {
   }, [projects, selectedProjectId, selectProject]);
 
   if (authLoading) {
-    return <div className="app-loading">Загрузка...</div>;
+    return <AppShellSkeleton />;
   }
 
   if (!session) {
@@ -246,6 +249,8 @@ export default function App() {
         projectRole={projectRole}
         canManageProjects={projectPermissions.canManageProjects}
         canManageColumns={projectPermissions.canManageColumns}
+        projectsLoading={isProjectsLoading}
+        membersLoading={isMembersLoading}
         members={projectMembers}
         importInputRef={importInputRef}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}

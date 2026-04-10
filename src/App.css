@@ -54,3 +54,115 @@
   min-width: 0;
   width: 100%;
 }
+
+/* AppShellSkeleton */
+.app-shell-skeleton__sidebar {
+  grid-column: 1;
+  background: #f8f6ff;
+  border-right: 1px solid #e9e3f7;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100vh;
+}
+
+.app-shell-skeleton__toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #efeaf9;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-shell-skeleton__profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9e3f7;
+}
+
+.app-shell-skeleton__avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #efeaf9;
+  border: 1px solid #d9d2ea;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-shell-skeleton__profileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-shell-skeleton__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-shell-skeleton__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.app-shell-skeleton__row {
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #e2dbf1;
+  background: #efeaf9;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-shell-skeleton__line {
+  height: 12px;
+  border-radius: 8px;
+  background: #efeaf9;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-shell-skeleton__line--lg {
+  width: 70px;
+}
+.app-shell-skeleton__line--md {
+  width: 120px;
+}
+.app-shell-skeleton__line--sm {
+  width: 86px;
+}
+
+.app-shell-skeleton__toggle::after,
+.app-shell-skeleton__avatar::after,
+.app-shell-skeleton__row::after,
+.app-shell-skeleton__line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: app-shell-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes app-shell-skeleton-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}

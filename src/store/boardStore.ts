@@ -43,6 +43,8 @@ type BoardState = {
     projectRole: ProjectRole;
     projectPermissions: ProjectPermissions;
     projectMembers: ProjectMember[];
+    isProjectsLoading: boolean;
+    isMembersLoading: boolean;
     tasksById: Record<string, Task>;
     columnsById: Record<string, Column>;
     columnOrder: string[];
@@ -131,35 +133,42 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     projectRole: "member",
     projectPermissions: roleToPermissions("member"),
     projectMembers: [],
+    isProjectsLoading: false,
+    isMembersLoading: false,
     tasksById: {},
     columnsById: {},
     columnOrder: [],
 
         loadProjects: async () => {
-        const projects = await fetchProjectsApi();
-        if (projects.length === 0) {
-            set({
-                projects: [],
-                selectedProjectId: null,
-                projectRole: "member",
-                projectPermissions: roleToPermissions("member"),
-                projectMembers: [],
-                tasksById: {},
-                columnsById: {},
-                columnOrder: [],
-            });
-            return;
-        }
+        set({ isProjectsLoading: true });
+        try {
+            const projects = await fetchProjectsApi();
+            if (projects.length === 0) {
+                set({
+                    projects: [],
+                    selectedProjectId: null,
+                    projectRole: "member",
+                    projectPermissions: roleToPermissions("member"),
+                    projectMembers: [],
+                    tasksById: {},
+                    columnsById: {},
+                    columnOrder: [],
+                });
+                return;
+            }
 
-        set((state) => ({
-            projects,
-            selectedProjectId: state.selectedProjectId ?? projects[0].id,
-        }));
+            set((state) => ({
+                projects,
+                selectedProjectId: state.selectedProjectId ?? projects[0].id,
+            }));
 
-        const selected = get().selectedProjectId ?? projects[0]?.id;
-        if (selected) {
-            await get().loadProjectRole(selected);
-            await get().loadProjectMembers(selected);
+            const selected = get().selectedProjectId ?? projects[0]?.id;
+            if (selected) {
+                await get().loadProjectRole(selected);
+                await get().loadProjectMembers(selected);
+            }
+        } finally {
+            set({ isProjectsLoading: false });
         }
     },
 
@@ -178,8 +187,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     loadProjectMembers: async (projectId) => {
-        const members = await fetchProjectMembersApi(projectId);
-        set({ projectMembers: members });
+        set({ isMembersLoading: true });
+        try {
+            const members = await fetchProjectMembersApi(projectId);
+            set({ projectMembers: members });
+        } finally {
+            set({ isMembersLoading: false });
+        }
     },
 
     addProjectMember: async (projectId, userId, role = "member") => {
