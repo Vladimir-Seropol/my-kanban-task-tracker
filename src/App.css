@@ -55,6 +55,32 @@
   width: 100%;
 }
 
+@media (max-width: 1024px) {
+  .app-shell--sidebar-open {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --board-panel-top-offset: 56px;
+    --board-column-height: calc(100vh - 116px);
+  }
+
+  .app-shell {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .app-shell--sidebar-open {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  }
+
+  .app-empty-board {
+    min-height: calc(100vh - 56px);
+    padding: 16px;
+  }
+}
+
 /* AppShellSkeleton */
 .app-shell-skeleton__sidebar {
   grid-column: 1;

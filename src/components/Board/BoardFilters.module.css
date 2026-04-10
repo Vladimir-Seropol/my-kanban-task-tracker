@@ -56,6 +56,7 @@
 .actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   margin-left: auto;
 }
@@ -64,5 +65,43 @@
   font-size: 12px;
   color: #6b5c89;
   white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+  .bar {
+    max-width: 100%;
+    padding-inline: 10px;
+  }
+
+  .field {
+    min-width: 180px;
+  }
+
+  .fieldSm {
+    min-width: 130px;
+  }
+}
+
+@media (max-width: 768px) {
+  .bar {
+    top: 0;
+    z-index: 94;
+    padding: 8px 10px;
+  }
+
+  .row {
+    gap: 4px;
+  }
+
+  .field {
+    min-width: 120px;
+    width: 100%;
+  }
+
+  .actions {
+    /* width: 100%; */
+    margin-left: 0;
+    justify-content: space-between;
+  }
 }
 

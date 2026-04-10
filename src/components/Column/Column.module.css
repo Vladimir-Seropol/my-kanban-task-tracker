@@ -59,3 +59,10 @@
 .column:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
+
+@media (max-width: 768px) {
+  .column {
+    width: min(84vw, 320px);
+    margin: 6px;
+  }
+}

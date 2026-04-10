@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect } from "react";
+import React, { useMemo } from "react";
 import {
     FixedSizeList as List,
     type ListChildComponentProps,
@@ -17,7 +17,24 @@ import styles from "./Column.module.css";
 
 import type { ColumnProps, RowData } from "../../types/types";
 
-const ITEM_HEIGHT = 264;
+/* Must match .task height in Task.module.css + vertical .row padding in Column.module.css */
+const ITEM_HEIGHT = 104;
+const LIST_BOTTOM_PADDING = 16;
+
+const VirtualListInner = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+    ({ style, ...rest }, ref) => (
+        <div
+            ref={ref}
+            style={{
+                ...style,
+                paddingBottom: LIST_BOTTOM_PADDING,
+                boxSizing: "border-box",
+            }}
+            {...rest}
+        />
+    )
+);
+VirtualListInner.displayName = "VirtualListInner";
 
 /* ROW */
 
@@ -58,16 +75,14 @@ export const Column = ({
         }
     });
 
-    const listRef = useRef<List>(null);
-    const scrollOffsetRef = useRef(0);
-
-    const handleScroll = ({ scrollOffset }: { scrollOffset: number }) => {
-        scrollOffsetRef.current = scrollOffset;
-    };
-
-    useLayoutEffect(() => {
-        listRef.current?.scrollTo(scrollOffsetRef.current);
-    });
+    const itemData = useMemo(
+        () => ({
+            tasks: column.tasks,
+            onOpenTaskEditor,
+            onDeleteTask,
+        }),
+        [column.tasks, onOpenTaskEditor, onDeleteTask]
+    );
 
     const hasTasks = column.tasks.length > 0;
 
@@ -112,19 +127,14 @@ export const Column = ({
                         </div>
                     ) : (
                         <List
-                            ref={listRef}
                             height={500}
                             width={280}
                             itemCount={column.tasks.length}
                             itemSize={ITEM_HEIGHT}
-                            onScroll={handleScroll}
-                            itemData={{
-                                tasks: column.tasks,
-                                onOpenTaskEditor,
-                                onDeleteTask,
-                            }}
+                            itemData={itemData}
                             itemKey={(index) => column.tasks[index].id}
                             className={styles.list}
+                            innerElementType={VirtualListInner}
                         >
                             {Row}
                         </List>

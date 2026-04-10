@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import clsx from "clsx";
-import { TaskPersonRow } from "./TaskPersonRow";
 import taskStyles from "./Task.module.css";
 import type { Task } from "../../types/types";
 
@@ -25,9 +24,11 @@ export const TaskCardContent = ({
   onClick,
   dragHandle,
 }: TaskCardContentProps) => {
-  const formatDate = (date?: string) => {
-    if (!date) return "—";
-    return new Date(date).toLocaleDateString();
+  const formatDueShort = (date?: string) => {
+    if (!date) return "";
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
   };
 
   const getDeadlineState = (dueDate?: string): DeadlineState => {
@@ -54,47 +55,43 @@ export const TaskCardContent = ({
       ? taskStyles.deadlineUpcoming
       : taskStyles.deadlineNone;
 
+  const tags = task.tags ?? [];
+  const visibleTags = tags.slice(0, 3);
+  const moreTags = tags.length - visibleTags.length;
+
   return (
     <div className={clsx(taskStyles.task, className)} onClick={onClick}>
       {dragHandle}
 
       <div className={taskStyles.title}>{task.text}</div>
 
-      <div className={taskStyles.meta}>
+      <div className={taskStyles.compactMeta}>
         <span
-          className={taskStyles.priority}
+          className={taskStyles.priorityPill}
           style={{ backgroundColor: priorityColors[task.priority] }}
         >
           {task.priority}
         </span>
-        <div className={taskStyles.date}>
-          <span>{formatDate(task.createdAt)}</span>
-          <span> - </span>
-          <span className={clsx(taskStyles.deadlineDate, deadlineClassName)}>
-            {formatDate(task.dueDate)}
-          </span>
+        {task.dueDate ? (
+          <span className={clsx(taskStyles.dueShort, deadlineClassName)}>{formatDueShort(task.dueDate)}</span>
+        ) : (
+          <span className={taskStyles.dueMuted}>Без срока</span>
+        )}
+        <span className={taskStyles.assigneeCompact} title={task.assignee || undefined}>
+          {task.assignee?.trim() ? task.assignee : "—"}
+        </span>
+      </div>
+
+      {visibleTags.length > 0 ? (
+        <div className={taskStyles.tags}>
+          {visibleTags.map((tag) => (
+            <span key={tag} className={taskStyles.tag}>
+              {tag}
+            </span>
+          ))}
+          {moreTags > 0 ? <span className={taskStyles.tagMore}>+{moreTags}</span> : null}
         </div>
-      </div>
-
-      <div className={taskStyles.users}>
-        <TaskPersonRow role="Исп." name={task.assignee} />
-        {task.reporter?.trim() ? (
-          <TaskPersonRow role="Реп." name={task.reporter} />
-        ) : null}
-      </div>
-
-      <div className={taskStyles.shortDescription}>
-        <span>Описание: </span>
-        {task.description?.trim() || "—"}
-      </div>
-
-      <div className={taskStyles.tags}>
-        {task.tags?.map((tag) => (
-          <span key={tag} className={taskStyles.tag}>
-            {tag}
-          </span>
-        ))}
-      </div>
+      ) : null}
     </div>
   );
 };

@@ -323,3 +323,40 @@
   opacity: 0;
   pointer-events: none;
 }
+
+@media (max-width: 1024px) {
+  .sidebar {
+    padding: 10px;
+  }
+
+  .open {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    margin-top: 0;
+    min-height: calc(100vh - 40px);
+    max-height: calc(100vh - 40px);
+    border-right: 1px solid #e9e3f7;
+  }
+
+  .closed {
+    padding: 10px 0;
+  }
+
+  .toggleRow {
+    padding-right: 6px;
+  }
+
+  .smallBtn {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+  .sidebarBtn {
+    font-size: 12px;
+    padding: 8px;
+  }
+}
