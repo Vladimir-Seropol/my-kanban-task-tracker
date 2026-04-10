@@ -192,11 +192,26 @@ export default function App() {
   };
 
   const getErrorMessage = (error: unknown, fallback: string) => {
-    const e = error as { message?: string; code?: string; error_description?: string } | null;
+    const e = error as {
+      message?: string;
+      code?: string;
+      error_description?: string;
+      details?: string;
+      hint?: string;
+    } | null;
     const message = e?.message ?? e?.error_description;
     if (message === "IMPORT_RPC_MISSING")
       return "На Supabase не применена миграция импорта. Выполните SQL: supabase-migration-import-board-rpc.sql";
-    if (message === "FORBIDDEN") return "Недостаточно прав";
+    if (message === "FORBIDDEN") return "Недостаточно прав для этого действия";
+    if (message === "CANNOT_REMOVE_OWNER") return "Нельзя удалить владельца проекта из участников";
+    if (message === "PROJECT_NOT_FOUND") return "Проект не найден";
+    if (message === "USER_NOT_FOUND") return "Пользователь с таким email не найден";
+    if (typeof message === "string" && message.toLowerCase().includes("invalid role")) {
+      return "Некорректная роль участника";
+    }
+    if (typeof message === "string" && message.toLowerCase().includes("remove_project_member")) {
+      return "Не удалось удалить участника. Проверьте, что применена миграция remove_project_member";
+    }
     if (e?.code === "42501" || (typeof message === "string" && message.includes("row-level security")))
       return "Импорт/запись заблокированы политиками БД. Выполните в Supabase SQL: supabase-migration-import-board-rpc.sql";
     return fallback;
