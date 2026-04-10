@@ -17,6 +17,7 @@ import { ColumnModal } from "../Column/ColumnModal";
 import { ConfirmModal } from "../Column/ConfirmModal";
 import { BoardSkeleton } from "../ui/BoardSkeleton";
 import { Button } from "../ui/Button/Button";
+import { TrashModal } from "./TrashModal";
 import styles from "./Board.module.css";
 import { toast } from "sonner";
 
@@ -70,6 +71,7 @@ export const Board = ({ projectId }: BoardProps) => {
     });
     const [isBoardLoaded, setIsBoardLoaded] = useState(false);
     const [didAutoOpenColumnModal, setDidAutoOpenColumnModal] = useState(false);
+    const [trashOpen, setTrashOpen] = useState(false);
 
     
     // EFFECTS
@@ -184,12 +186,17 @@ export const Board = ({ projectId }: BoardProps) => {
                 <h1 className={styles.title}>Доска</h1>
 
                 {projectPermissions.canManageColumns && (
-                    <Button
-                        variant="primary"
-                        onClick={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
-                    >
-                        + Добавить колонку
-                    </Button>
+                    <>
+                        <Button
+                            variant="primary"
+                            onClick={() => setColumnModal({ isOpen: true, title: "", editingId: null })}
+                        >
+                            + Добавить колонку
+                        </Button>
+                        <Button variant="secondary" onClick={() => setTrashOpen(true)}>
+                            Корзина
+                        </Button>
+                    </>
                 )}
 
             </div>
@@ -240,10 +247,21 @@ export const Board = ({ projectId }: BoardProps) => {
             <DragOverlay>{activeTask && <TaskOverlay task={activeTask} />}</DragOverlay>
 
             {/* DELETE TASK */}
+            <TrashModal
+                projectId={projectId}
+                isOpen={trashOpen}
+                onClose={() => setTrashOpen(false)}
+                onRestored={() => void loadBoard(projectId)}
+            />
+
             <ConfirmModal
                 isOpen={!!deleteTaskId}
                 title="Удалить задачу?"
-                description={deleteTaskId ? `Удалить задачу "${getTask(deleteTaskId)?.text}"` : ""}
+                description={
+                    deleteTaskId
+                        ? `Переместить в корзину задачу «${getTask(deleteTaskId)?.text}»? (можно восстановить)`
+                        : ""
+                }
                 onClose={() => setDeleteTaskId(null)}
                 onConfirm={async () => {
                     try {
@@ -260,7 +278,7 @@ export const Board = ({ projectId }: BoardProps) => {
             <ConfirmModal
                 isOpen={!!deleteColumnId}
                 title="Удалить колонку?"
-                description="Удалить колонку со всеми задачами?"
+                description="Переместить колонку и её задачи в корзину? (восстановление — из корзины)"
                 onClose={() => setDeleteColumnId(null)}
                 onConfirm={async () => {
                     try {

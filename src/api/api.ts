@@ -51,6 +51,11 @@ type ProjectMemberRoleRow = {
   role: ProjectRole;
 };
 
+/** PostgREST: RPC ещё не создана в БД (миграция не применена). */
+const isRpcMissingError = (error: { code?: string; message?: string }) =>
+  error.code === "PGRST202" ||
+  (typeof error.message === "string" && error.message.includes("Could not find the function"));
+
 const mapTaskRowToApi = (row: TaskRow): TaskApi => ({
   id: row.id,
   text: row.text,
@@ -179,9 +184,16 @@ export const updateTaskApi = async (
 };
 
 export const deleteTaskApi = async (taskId: string): Promise<void> => {
+  const rpc = await supabase.rpc("soft_delete_project_task", {
+    p_task_id: taskId,
+  });
+  if (!rpc.error) return;
+  if (!isRpcMissingError(rpc.error)) throw rpc.error;
+
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("tasks")
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: now })
     .eq("id", taskId);
   if (error) throw error;
 };
@@ -228,6 +240,12 @@ export const updateColumnApi = async (
 };
 
 export const deleteColumnApi = async (columnId: string) => {
+  const rpc = await supabase.rpc("soft_delete_project_column", {
+    p_column_id: columnId,
+  });
+  if (!rpc.error) return;
+  if (!isRpcMissingError(rpc.error)) throw rpc.error;
+
   const now = new Date().toISOString();
   const { error: tasksError } = await supabase
     .from("tasks")
@@ -455,5 +473,68 @@ export const removeProjectMemberApi = async (
     .delete()
     .eq("project_id", projectId)
     .eq("user_id", userId);
+  if (error) throw error;
+};
+
+// Корзина (soft delete): только админ проекта — через RPC (RLS на UPDATE не ограничивает deleted_at для участников).
+export type TrashColumnRow = {
+  id: string;
+  title: string;
+  deleted_at: string | null;
+};
+
+export type TrashTaskRow = {
+  id: string;
+  text: string;
+  column_id: string;
+  column_title: string;
+  deleted_at: string | null;
+};
+
+export const fetchTrashColumnsApi = async (
+  projectId: string
+): Promise<TrashColumnRow[]> => {
+  const { data, error } = await supabase.rpc("list_project_trash_columns", {
+    p_project_id: projectId,
+  });
+
+  if (error) throw error;
+  return ((data ?? []) as ColumnRow[]).map((r) => ({
+    id: r.id,
+    title: r.title,
+    deleted_at: r.deleted_at ?? null,
+  }));
+};
+
+export const fetchTrashTasksApi = async (
+  projectId: string
+): Promise<TrashTaskRow[]> => {
+  const { data, error } = await supabase.rpc("list_project_trash_tasks", {
+    p_project_id: projectId,
+  });
+
+  if (error) throw error;
+  return (data ?? []) as TrashTaskRow[];
+};
+
+export const restoreColumnFromTrashApi = async (columnId: string): Promise<void> => {
+  const { error } = await supabase.rpc("restore_project_column", {
+    p_column_id: columnId,
+  });
+  if (error) throw error;
+};
+
+export const restoreTaskFromTrashApi = async (taskId: string): Promise<void> => {
+  const { error } = await supabase.rpc("restore_project_task", {
+    p_task_id: taskId,
+  });
+  if (error) throw error;
+};
+
+/** Безвозвратно удалить из БД всё в корзине проекта. Нужна миграция supabase-migration-purge-trash.sql */
+export const purgeProjectTrashApi = async (projectId: string): Promise<void> => {
+  const { error } = await supabase.rpc("purge_project_trash", {
+    p_project_id: projectId,
+  });
   if (error) throw error;
 };

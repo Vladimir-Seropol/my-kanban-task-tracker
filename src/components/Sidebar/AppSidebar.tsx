@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, RefObject } from "react";
 import { supabase } from "../../lib/supabase";
 import type { ProjectApi, ProjectMember, ProjectRole } from "../../types/types";
@@ -58,6 +58,7 @@ export const AppSidebar = ({
 }: AppSidebarProps) => {
   const [currentName, setCurrentName] = useState(userName ?? "");
   const [currentAvatar, setCurrentAvatar] = useState(userAvatarUrl ?? "");
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [projectRenameModalOpen, setProjectRenameModalOpen] = useState(false);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
@@ -65,6 +66,15 @@ export const AppSidebar = ({
   const profileInputRef = useRef<HTMLInputElement>(null);
   const handleToggleSidebar = onToggleSidebar;
   const displayName = currentName.trim() || userEmail || "Пользователь";
+
+  useEffect(() => {
+    if (userName !== undefined) setCurrentName(userName);
+  }, [userName]);
+
+  useEffect(() => {
+    setCurrentAvatar(userAvatarUrl ?? "");
+    setAvatarLoadError(false);
+  }, [userAvatarUrl]);
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null;
 
@@ -118,6 +128,7 @@ export const AppSidebar = ({
     }
 
     setCurrentAvatar(nextAvatar);
+    setAvatarLoadError(false);
     toast.success("Фото профиля обновлено");
     event.target.value = "";
   };
@@ -152,8 +163,16 @@ export const AppSidebar = ({
       <div className={styles.top}>
         <div className={styles.userBlock}>
           <button className={styles.avatarButton} type="button" onClick={handlePickAvatar} title="Сменить фото">
-            {currentAvatar ? (
-              <img className={styles.avatarImage} src={currentAvatar} alt="Аватар профиля" />
+            {currentAvatar && !avatarLoadError ? (
+              <img
+                className={styles.avatarImage}
+                src={currentAvatar}
+                alt=""
+                width={50}
+                height={50}
+                decoding="async"
+                onError={() => setAvatarLoadError(true)}
+              />
             ) : (
               <div className={styles.userAvatar}>{(displayName[0] ?? "U").toUpperCase()}</div>
             )}
