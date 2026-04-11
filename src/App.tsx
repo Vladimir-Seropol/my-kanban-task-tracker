@@ -13,6 +13,24 @@ import { Toaster, toast } from "sonner";
 import { getApiErrorMessage } from "./utils/apiErrors";
 import "./App.css";
 
+/** Один раз после первого создания проекта — напоминание про экспорт JSON. */
+const LS_FIRST_PROJECT_EXPORT_TIP = "kanban_first_project_export_tip_v1";
+
+function showFirstProjectExportTipIfNeeded(isFirstProject: boolean) {
+  if (!isFirstProject) return;
+  try {
+    if (typeof localStorage === "undefined" || localStorage.getItem(LS_FIRST_PROJECT_EXPORT_TIP)) return;
+    localStorage.setItem(LS_FIRST_PROJECT_EXPORT_TIP, "1");
+  } catch {
+    return;
+  }
+  toast.info("Резервная копия доски", {
+    description:
+      "Периодически сохраняйте данные: в боковой панели нажмите «Экспорт JSON» — так у вас будет локальная копия проекта.",
+    duration: 12_000,
+  });
+}
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -91,10 +109,12 @@ export default function App() {
   };
 
   const handleCreateProjectSubmit = async (nextName: string) => {
+    const isFirstProject = projects.length === 0;
     try {
       await createProject(nextName);
       setProjectNameModalOpen(false);
       toast.success("Проект создан");
+      showFirstProjectExportTipIfNeeded(isFirstProject);
     } catch (error) {
       console.error(error);
       toast.error("Не удалось создать проект");
