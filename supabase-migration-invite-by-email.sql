@@ -1,5 +1,6 @@
--- Invite project member by email (admin only)
--- Requires running in Supabase SQL Editor as project owner.
+-- Invite project member by email (владелец проекта или admin в project_members).
+-- Требуются auth_is_project_owner / auth_is_project_admin
+-- (см. supabase-migration-fix-projects-rls-recursion.sql).
 
 create or replace function public.invite_project_member_by_email(
   p_project_id uuid,
@@ -20,13 +21,8 @@ begin
     raise exception 'invalid role';
   end if;
 
-  if not exists (
-    select 1
-    from public.project_members pm
-    where pm.project_id = p_project_id
-      and pm.user_id = auth.uid()
-      and pm.role = 'admin'
-  ) then
+  if not coalesce(public.auth_is_project_owner(p_project_id), false)
+     and not coalesce(public.auth_is_project_admin(p_project_id), false) then
     raise exception 'FORBIDDEN';
   end if;
 

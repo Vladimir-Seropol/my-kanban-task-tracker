@@ -7,6 +7,7 @@ import { InputModal } from "../ui/InputModal/InputModal";
 import { ConfirmModal } from "../Column/ConfirmModal";
 import { toast } from "sonner";
 import { MembersModal } from "./MembersModal";
+import { avatarsBucketPathFromPublicUrl } from "../../utils/avatarStorage";
 
 type AppSidebarProps = {
   sidebarOpen: boolean;
@@ -110,6 +111,10 @@ export const AppSidebar = ({
 
     const ext = file.name.includes(".") ? file.name.split(".").pop()?.toLowerCase() ?? "jpg" : "jpg";
     const path = `${userId}/profile-${Date.now()}.${ext}`;
+    const previousPathRaw = avatarsBucketPathFromPublicUrl(currentAvatar);
+    const previousPath =
+      previousPathRaw?.startsWith(`${userId}/`) && previousPathRaw !== path ? previousPathRaw : null;
+
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(path, file, { cacheControl: "3600", upsert: true });
@@ -130,7 +135,13 @@ export const AppSidebar = ({
     if (updateError) {
       toast.error("Фото загружено, но профиль не обновлен");
       event.target.value = "";
+      await supabase.storage.from("avatars").remove([path]);
       return;
+    }
+
+    if (previousPath) {
+      const { error: removeError } = await supabase.storage.from("avatars").remove([previousPath]);
+      if (removeError) console.warn("Не удалось удалить предыдущий аватар:", removeError);
     }
 
     setCurrentAvatar(nextAvatar);
