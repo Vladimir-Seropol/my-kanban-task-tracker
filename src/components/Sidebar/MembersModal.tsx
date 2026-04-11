@@ -5,6 +5,8 @@ import styles from "./MembersModal.module.css";
 type MembersModalProps = {
   isOpen: boolean;
   currentUserId: string;
+  /** Фактическая роль текущего пользователя в проекте (как в сайдбаре), чтобы строка «вы» не расходилась с БД при владельце. */
+  currentUserProjectRole: ProjectRole;
   canManageProjects: boolean;
   membersLoading: boolean;
   members: ProjectMember[];
@@ -25,6 +27,7 @@ const displayMemberName = (member: ProjectMember) => {
 export const MembersModal = ({
   isOpen,
   currentUserId,
+  currentUserProjectRole,
   canManageProjects,
   membersLoading,
   members,
@@ -40,10 +43,12 @@ export const MembersModal = ({
   const sortedMembers = useMemo(
     () =>
       [...members].sort((a, b) => {
-        if (a.role !== b.role) return a.role === "admin" ? -1 : 1;
+        const ra = a.userId === currentUserId ? currentUserProjectRole : a.role;
+        const rb = b.userId === currentUserId ? currentUserProjectRole : b.role;
+        if (ra !== rb) return ra === "admin" ? -1 : 1;
         return displayMemberName(a).localeCompare(displayMemberName(b), "ru");
       }),
-    [members]
+    [members, currentUserId, currentUserProjectRole]
   );
 
   if (!isOpen) return null;
@@ -118,28 +123,37 @@ export const MembersModal = ({
           ) : sortedMembers.length === 0 ? (
             <div className={styles.muted}>Список участников пуст.</div>
           ) : (
-            sortedMembers.map((member) => (
+            sortedMembers.map((member) => {
+              const isSelf = member.userId === currentUserId;
+              const rowRole = isSelf ? currentUserProjectRole : member.role;
+              return (
               <div key={member.userId} className={styles.item}>
                 <div className={styles.main}>
                   <div className={styles.name}>{displayMemberName(member)}</div>
                   <div className={styles.email}>{member.email || "email недоступен"}</div>
                 </div>
                 <div className={styles.actions}>
-                  <span className={styles.role}>{member.role}</span>
+                  <span className={styles.role}>{rowRole}</span>
                   {canManageProjects && (
                     <>
-                      <button
-                        className={styles.ghostBtn}
-                        type="button"
-                        onClick={() =>
-                          void onUpdateMemberRole(
-                            member.userId,
-                            member.role === "admin" ? "member" : "admin"
-                          )
-                        }
-                      >
-                        {member.role === "admin" ? "Сделать member" : "Сделать admin"}
-                      </button>
+                      {isSelf ? (
+                        <span className={styles.muted} title="Нельзя изменить свою роль в проекте">
+                          —
+                        </span>
+                      ) : (
+                        <button
+                          className={styles.ghostBtn}
+                          type="button"
+                          onClick={() =>
+                            void onUpdateMemberRole(
+                              member.userId,
+                              member.role === "admin" ? "member" : "admin"
+                            )
+                          }
+                        >
+                          {member.role === "admin" ? "Сделать member" : "Сделать admin"}
+                        </button>
+                      )}
                       <button
                         className={styles.dangerBtn}
                         type="button"
@@ -153,7 +167,8 @@ export const MembersModal = ({
                   )}
                 </div>
               </div>
-            ))
+            );
+            })
           )}
         </div>
       </div>

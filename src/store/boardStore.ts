@@ -52,7 +52,7 @@ type BoardState = {
     loadProjects: () => Promise<void>;
     selectProject: (projectId: string) => void;
     loadProjectRole: (projectId: string) => Promise<void>;
-    loadProjectMembers: (projectId: string) => Promise<void>;
+    loadProjectMembers: (projectId: string, options?: { force?: boolean }) => Promise<void>;
     addProjectMember: (projectId: string, userId: string, role?: ProjectRole) => Promise<void>;
     addProjectMemberByEmail: (projectId: string, email: string, role?: ProjectRole) => Promise<void>;
     updateProjectMemberRole: (projectId: string, userId: string, role: ProjectRole) => Promise<void>;
@@ -212,11 +212,17 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         await req;
     },
 
-    loadProjectMembers: async (projectId) => {
-        const existing = loadMembersInFlight.get(projectId);
-        if (existing) {
-            await existing;
-            return;
+    loadProjectMembers: async (projectId, options) => {
+        if (!options?.force) {
+            const existing = loadMembersInFlight.get(projectId);
+            if (existing) {
+                await existing;
+                return;
+            }
+        } else {
+            const pending = loadMembersInFlight.get(projectId);
+            if (pending) await pending;
+            loadMembersInFlight.delete(projectId);
         }
 
         set({ isMembersLoading: true });
@@ -235,25 +241,25 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     addProjectMember: async (projectId, userId, role = "member") => {
         await requireAdminPermission(get, projectId);
         await addProjectMemberApi(projectId, userId, role);
-        await get().loadProjectMembers(projectId);
+        await get().loadProjectMembers(projectId, { force: true });
     },
 
     addProjectMemberByEmail: async (projectId, email, role = "member") => {
         await requireAdminPermission(get, projectId);
         await addProjectMemberByEmailApi(projectId, email, role);
-        await get().loadProjectMembers(projectId);
+        await get().loadProjectMembers(projectId, { force: true });
     },
 
     updateProjectMemberRole: async (projectId, userId, role) => {
         await requireAdminPermission(get, projectId);
         await updateProjectMemberRoleApi(projectId, userId, role);
-        await get().loadProjectMembers(projectId);
+        await get().loadProjectMembers(projectId, { force: true });
     },
 
     removeProjectMember: async (projectId, userId) => {
         await requireAdminPermission(get, projectId);
         await removeProjectMemberApi(projectId, userId);
-        await get().loadProjectMembers(projectId);
+        await get().loadProjectMembers(projectId, { force: true });
     },
 
     createProject: async (name) => {

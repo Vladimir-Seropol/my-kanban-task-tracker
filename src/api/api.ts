@@ -59,6 +59,7 @@ const isRpcMissingError = (error: {
   message?: string;
   details?: string;
   hint?: string;
+  status?: number;
 }) => {
   const fullText = [error.message, error.details, error.hint]
     .filter((v): v is string => typeof v === "string")
@@ -66,11 +67,13 @@ const isRpcMissingError = (error: {
     .toLowerCase();
 
   return (
+    error.status === 404 ||
     error.code === "PGRST202" ||
     error.code === "42883" ||
     fullText.includes("could not find the function") ||
-    fullText.includes("function") && fullText.includes("does not exist") ||
-    fullText.includes("not found")
+    (fullText.includes("function") && fullText.includes("does not exist")) ||
+    fullText.includes("not found") ||
+    /\b404\b/.test(fullText)
   );
 };
 
@@ -441,17 +444,42 @@ export const addProjectMemberByEmailApi = async (
   if (error) throw error;
 };
 
+/** RPC/RLS из supabase-migration-update-member-role-rls-and-rpc.sql не применены в Supabase. */
+export const UPDATE_MEMBER_ROLE_MIGRATION_REQUIRED = "UPDATE_MEMBER_ROLE_MIGRATION_REQUIRED";
+
 export const updateProjectMemberRoleApi = async (
   projectId: string,
   userId: string,
   role: ProjectRole
 ): Promise<void> => {
-  const { error } = await supabase
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (sessionData.session?.user?.id === userId) {
+    throw new Error("CANNOT_CHANGE_OWN_ROLE");
+  }
+
+  const rpc = await supabase.rpc("update_project_member_role", {
+    p_project_id: projectId,
+    p_user_id: userId,
+    p_role: role,
+  });
+  if (!rpc.error) return;
+  const rpcMissing = isRpcMissingError(rpc.error);
+  if (!rpcMissing) throw rpc.error;
+
+  const { data, error } = await supabase
     .from("project_members")
     .update({ role })
     .eq("project_id", projectId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("user_id")
+    .maybeSingle();
   if (error) throw error;
+  if (!data) {
+    throw new Error(
+      rpcMissing ? UPDATE_MEMBER_ROLE_MIGRATION_REQUIRED : "NO_ROWS_UPDATED"
+    );
+  }
 };
 
 export const removeProjectMemberApi = async (

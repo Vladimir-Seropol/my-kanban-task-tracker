@@ -328,6 +328,7 @@ export const AppSidebar = ({
       <MembersModal
         isOpen={memberModalOpen}
         currentUserId={userId}
+        currentUserProjectRole={projectRole}
         canManageProjects={canManageProjects}
         membersLoading={membersLoading}
         members={members.filter((member) => member.projectId === selectedProjectId)}
