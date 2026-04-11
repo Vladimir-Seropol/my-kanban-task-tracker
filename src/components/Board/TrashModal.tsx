@@ -11,6 +11,7 @@ import {
   type TrashTaskRow,
 } from "../../api/api";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "../../utils/apiErrors";
 import styles from "./TrashModal.module.css";
 
 type TrashModalProps = {
@@ -78,13 +79,6 @@ export const TrashModal = ({ projectId, isOpen, onClose, onRestored }: TrashModa
 
   if (!isOpen) return null;
 
-  const mapRpcError = (error: unknown, fallback: string) => {
-    const msg = (error as { message?: string } | null)?.message ?? "";
-    if (msg.includes("FORBIDDEN")) return "Недостаточно прав";
-    if (msg.includes("COLUMN_IN_TRASH")) return "Сначала восстановите колонку";
-    return fallback;
-  };
-
   const handleRestoreColumn = async (columnId: string) => {
     setBusyId(`col:${columnId}`);
     try {
@@ -94,7 +88,7 @@ export const TrashModal = ({ projectId, isOpen, onClose, onRestored }: TrashModa
       await load();
     } catch (error) {
       console.error(error);
-      toast.error(mapRpcError(error, "Не удалось восстановить колонку"));
+      toast.error(getApiErrorMessage(error, "Не удалось восстановить колонку"));
     } finally {
       setBusyId(null);
     }
@@ -109,7 +103,7 @@ export const TrashModal = ({ projectId, isOpen, onClose, onRestored }: TrashModa
       await load();
     } catch (error) {
       console.error(error);
-      toast.error(mapRpcError(error, "Не удалось восстановить задачу"));
+      toast.error(getApiErrorMessage(error, "Не удалось восстановить задачу"));
     } finally {
       setBusyId(null);
     }
@@ -129,10 +123,16 @@ export const TrashModal = ({ projectId, isOpen, onClose, onRestored }: TrashModa
     } catch (error) {
       console.error(error);
       const msg = (error as { message?: string } | null)?.message ?? "";
-      if (msg.includes("FORBIDDEN")) toast.error("Недостаточно прав");
-      else if (msg.includes("Could not find the function") || (error as { code?: string })?.code === "PGRST202") {
+      if (msg.includes("FORBIDDEN")) {
+        toast.error(getApiErrorMessage(error, "Недостаточно прав для этого действия"));
+      } else if (
+        msg.includes("Could not find the function") ||
+        (error as { code?: string })?.code === "PGRST202"
+      ) {
         toast.error("Выполните в Supabase SQL: supabase-migration-purge-trash.sql");
-      } else toast.error("Не удалось очистить корзину");
+      } else {
+        toast.error(getApiErrorMessage(error, "Не удалось очистить корзину"));
+      }
     } finally {
       setBusyId(null);
     }

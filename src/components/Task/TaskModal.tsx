@@ -3,6 +3,7 @@ import styles from "./TaskModal.module.css";
 import { Button } from "../ui/Button/Button";
 import { TaskPersonRow } from "./TaskPersonRow";
 import type { Task, TaskModalProps } from "../../types/types";
+import { parseTagsFromCommaInput, tagsArrayToCommaInput } from "../../utils/taskTags";
 
 const priorityColors: Record<Task["priority"], string> = {
   низкий: "#4caf50",
@@ -22,23 +23,6 @@ export const TaskModal = ({
   canDeleteTask = true,
   onDelete,
 }: TaskModalProps & { onDelete?: (id: string) => void }) => {
-  const normalizeTag = (tag: string) => {
-    const clean = tag.trim().replace(/^#+/, "");
-    return clean ? `#${clean}` : "";
-  };
-
-  const parseTagsInput = (value: string) =>
-    value
-      .split(",")
-      .map(normalizeTag)
-      .filter(Boolean);
-
-  const tagsToInput = (tags?: string[]) =>
-    (tags ?? [])
-      .map(normalizeTag)
-      .filter(Boolean)
-      .join(", ");
-
   const [isEditingViewTask, setIsEditingViewTask] = useState(false);
   const localMode: Mode =
     mode === "create" ? "create" : isEditingViewTask ? "edit" : "view";
@@ -67,13 +51,13 @@ export const TaskModal = ({
   );
 
   const [form, setForm] = useState<Task>(defaultTask);
-  const [tagsInput, setTagsInput] = useState<string>(tagsToInput(defaultTask.tags));
+  const [tagsInput, setTagsInput] = useState<string>(tagsArrayToCommaInput(defaultTask.tags));
 
   useEffect(() => {
     if (!isOpen) return;
     requestAnimationFrame(() => {
       setForm(defaultTask);
-      setTagsInput(tagsToInput(defaultTask.tags));
+      setTagsInput(tagsArrayToCommaInput(defaultTask.tags));
     });
   }, [isOpen, defaultTask]);
 
@@ -279,9 +263,9 @@ export const TaskModal = ({
               onChange={(e) => {
                 const raw = e.target.value;
                 setTagsInput(raw);
-                handleChange("tags", parseTagsInput(raw));
+                handleChange("tags", parseTagsFromCommaInput(raw));
               }}
-              onBlur={() => setTagsInput(tagsToInput(parseTagsInput(tagsInput)))}
+              onBlur={() => setTagsInput(tagsArrayToCommaInput(parseTagsFromCommaInput(tagsInput)))}
               placeholder="Теги (через запятую)"
             />
 
@@ -307,10 +291,10 @@ export const TaskModal = ({
                 Отмена
               </Button>
 
-              <Button
+                <Button
                 onClick={() => {
                   setIsEditingViewTask(false);
-                  onSubmit({ ...form, tags: parseTagsInput(tagsInput) });
+                  onSubmit({ ...form, tags: parseTagsFromCommaInput(tagsInput) });
                 }}
                 disabled={!canSubmit}
                 variant="primary"

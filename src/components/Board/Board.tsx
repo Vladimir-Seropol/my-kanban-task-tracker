@@ -11,17 +11,20 @@ import {
 import { useEffect, useState } from "react";
 
 import { Column } from "../Column/Column";
-import { TaskOverlay } from "../../components/Task/TaskOverlay";
+import { TaskOverlay } from "../Task/TaskOverlay";
 import { BoardSkeleton } from "../ui/BoardSkeleton";
 import { Button } from "../ui/Button/Button";
 import { BoardHeader } from "./BoardHeader";
 import { BoardModals } from "./BoardModals";
-import { BoardFilters, type BoardFiltersValue } from "./BoardFilters";
+import { BoardFilters } from "./BoardFilters";
 import styles from "./Board.module.css";
 import { toast } from "sonner";
 
 import type { Task } from "../../types/types";
 import { useBoardStore } from "../../store/boardStore";
+import type { BoardFiltersValue } from "../../utils/boardTaskFilter";
+import { taskMatchesBoardFilters } from "../../utils/boardTaskFilter";
+import { getApiErrorMessage } from "../../utils/apiErrors";
 
 type BoardProps = {
     projectId: string;
@@ -104,90 +107,9 @@ export const Board = ({ projectId }: BoardProps) => {
     // HELPERS
         const getTask = (id: string) => tasksById[id];
 
-    const normalize = (s: string) => s.trim().toLowerCase();
-    const normalizeTag = (s: string) => {
-        const clean = normalize(s).replace(/^#+/, "");
-        return clean ? `#${clean}` : "";
-    };
-    const parseTags = (s: string) =>
-        s
-            .split(",")
-            .map((t) => normalizeTag(t))
-            .filter(Boolean);
-
-    const isToday = (d: Date) => {
-        const t = new Date();
-        t.setHours(0, 0, 0, 0);
-        const x = new Date(d);
-        x.setHours(0, 0, 0, 0);
-        return x.getTime() === t.getTime();
-    };
-
-    const isThisWeek = (d: Date) => {
-        const now = new Date();
-        const day = (now.getDay() + 6) % 7; // monday=0
-        const start = new Date(now);
-        start.setHours(0, 0, 0, 0);
-        start.setDate(now.getDate() - day);
-        const end = new Date(start);
-        end.setDate(start.getDate() + 7);
-        return d >= start && d < end;
-    };
-
-    const matchesFilters = (task: Task) => {
-        const q = normalize(filters.q);
-        if (q) {
-            const hay = [
-                task.text,
-                task.description,
-                task.source ?? "",
-                task.epic ?? "",
-                (task.tags ?? []).join(" "),
-            ]
-                .join(" ")
-                .toLowerCase();
-            if (!hay.includes(q)) return false;
-        }
-
-        const assignee = normalize(filters.assignee);
-        if (assignee) {
-            if (!normalize(task.assignee).includes(assignee)) return false;
-        }
-
-        if (filters.priority !== "all") {
-            if (task.priority !== filters.priority) return false;
-        }
-
-        const wantTags = parseTags(filters.tags);
-        if (wantTags.length > 0) {
-            const got = (task.tags ?? []).map((t) => normalizeTag(t)).filter(Boolean);
-            // Multiple tags are AND; each tag token matches by partial includes.
-            if (!wantTags.every((needle) => got.some((tag) => tag.includes(needle)))) return false;
-        }
-
-        if (filters.due !== "all") {
-            const dueRaw = task.dueDate;
-            if (filters.due === "no_due") return !dueRaw;
-            if (!dueRaw) return false;
-            const due = new Date(dueRaw);
-            if (Number.isNaN(due.getTime())) return false;
-
-            const today0 = new Date();
-            today0.setHours(0, 0, 0, 0);
-            const due0 = new Date(due);
-            due0.setHours(0, 0, 0, 0);
-
-            if (filters.due === "overdue") return due0.getTime() < today0.getTime();
-            if (filters.due === "today") return isToday(due0);
-            if (filters.due === "this_week") return isThisWeek(due0);
-        }
-
-        return true;
-    };
-
     const allTasksCount = Object.keys(tasksById).length;
     const visibleTasksCount = Object.values(tasksById).reduce(
-        (acc, t) => acc + (matchesFilters(t) ? 1 : 0),
+        (acc, t) => acc + (taskMatchesBoardFilters(t, filters) ? 1 : 0),
         0
     );
 
@@ -204,15 +126,6 @@ export const Board = ({ projectId }: BoardProps) => {
         });
     };
 
-    const getErrorMessage = (error: unknown, fallback: string) => {
-        const message =
-            (error as { message?: string } | null)?.message ??
-            (error as { error_description?: string } | null)?.error_description;
-        if (message === "FORBIDDEN") return "Недостаточно прав для этого действия";
-        return fallback;
-    };
-
-    
     // DND HANDLERS
         const onDragStart = (event: DragStartEvent) => {
         const task = getTask(String(event.active.id));
@@ -243,7 +156,7 @@ export const Board = ({ projectId }: BoardProps) => {
 
         void moveTask({ taskId, fromColumnId, toColumnId, toIndex }).catch((error) => {
             console.error(error);
-            toast.error(getErrorMessage(error, "Не удалось переместить задачу"));
+            toast.error(getApiErrorMessage(error, "Не удалось переместить задачу"));
         });
         setActiveTask(null);
     };
@@ -322,7 +235,7 @@ export const Board = ({ projectId }: BoardProps) => {
                                 const tasks: Task[] = column.taskIds
                                     .map((id) => getTask(id))
                                     .filter(Boolean)
-                                    .filter((t) => matchesFilters(t as Task));
+                                    .filter((t) => taskMatchesBoardFilters(t as Task, filters));
 
                                 return (
                                     <Column
@@ -367,7 +280,7 @@ export const Board = ({ projectId }: BoardProps) => {
                     editTask={editTask}
                     createColumn={createColumn}
                     editColumn={editColumn}
-                    getErrorMessage={getErrorMessage}
+                    getErrorMessage={getApiErrorMessage}
                     onError={(message) => toast.error(message)}
                 />
             </DndContext>

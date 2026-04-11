@@ -1,17 +1,9 @@
 import { useMemo } from "react";
 import { Button } from "../ui/Button/Button";
 import styles from "./BoardFilters.module.css";
-import type { Task } from "../../types/types";
+import type { DueFilter, BoardFiltersValue } from "../../utils/boardTaskFilter";
 
-export type DueFilter = "all" | "overdue" | "today" | "this_week" | "no_due";
-
-export type BoardFiltersValue = {
-  q: string;
-  assignee: string;
-  tags: string; // comma-separated
-  priority: "all" | Task["priority"];
-  due: DueFilter;
-};
+export type { DueFilter, BoardFiltersValue };
 
 type BoardFiltersProps = {
   value: BoardFiltersValue;
