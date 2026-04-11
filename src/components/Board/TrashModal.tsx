@@ -145,7 +145,7 @@ export const TrashModal = ({ projectId, isOpen, onClose, onRestored }: TrashModa
           <ConfirmModal
             isOpen
             title="Очистить корзину?"
-            description="Все элементы в корзине будут безвозвратно удалены из базы. Это действие нельзя отменить."
+            description="Записи из корзины удалятся из базы безвозвратно. Отменить будет нельзя."
             confirmLabel="Очистить"
             variant="danger"
             onClose={() => setPurgeOpen(false)}
@@ -173,8 +173,7 @@ export const TrashModal = ({ projectId, isOpen, onClose, onRestored }: TrashModa
           </div>
         </div>
         <p className={styles.hint}>
-          Сейчас записи только помечаются удалёнными; они остаются в базе, пока вы не восстановите их или не очистите
-          корзину. Восстановление и очистка — только администратору проекта.
+           Восстановление и очистка — только администратору проекта.
         </p>
 
         {loading ? (
