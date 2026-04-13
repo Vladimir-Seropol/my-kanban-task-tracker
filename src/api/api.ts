@@ -16,6 +16,9 @@ type TaskRow = {
   reporter: string;
   source: string;
   description: string;
+  progress_done: string;
+  progress_current: string;
+  progress_blockers: string;
   epic: string;
   tags: string[];
   priority: string;
@@ -86,6 +89,9 @@ const mapTaskRowToApi = (row: TaskRow): TaskApi => ({
   reporter: row.reporter,
   source: row.source,
   description: row.description,
+  progressDone: row.progress_done ?? "",
+  progressCurrent: row.progress_current ?? "",
+  progressBlockers: row.progress_blockers ?? "",
   epic: row.epic,
   tags: row.tags ?? [],
   priority: row.priority,
@@ -102,6 +108,9 @@ const mapTaskApiToInsert = (task: TaskApi): TaskRow => ({
   reporter: task.reporter ?? "",
   source: task.source ?? "",
   description: task.description ?? "",
+  progress_done: task.progressDone ?? "",
+  progress_current: task.progressCurrent ?? "",
+  progress_blockers: task.progressBlockers ?? "",
   epic: task.epic ?? "",
   tags: task.tags ?? [],
   priority: task.priority,
@@ -120,6 +129,9 @@ const mapTaskApiPatchToUpdate = (data: Partial<TaskApi>): Partial<TaskRow> => {
   if (data.reporter !== undefined) update.reporter = data.reporter;
   if (data.source !== undefined) update.source = data.source;
   if (data.description !== undefined) update.description = data.description;
+  if (data.progressDone !== undefined) update.progress_done = data.progressDone;
+  if (data.progressCurrent !== undefined) update.progress_current = data.progressCurrent;
+  if (data.progressBlockers !== undefined) update.progress_blockers = data.progressBlockers;
   if (data.epic !== undefined) update.epic = data.epic;
   if (data.tags !== undefined) update.tags = data.tags;
   if (data.priority !== undefined) update.priority = data.priority;

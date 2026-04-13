@@ -11,6 +11,9 @@ const baseColumns = (): ColumnType[] => [
           id: "t1", text: "Task 1", columnId: "todo", order: 0,
           assignee: "",
           description: "",
+          progressDone: "",
+          progressCurrent: "",
+          progressBlockers: "",
           createdAt: "",
           priority: "низкий"
       },
@@ -18,6 +21,9 @@ const baseColumns = (): ColumnType[] => [
           id: "t2", text: "Task 2", columnId: "todo", order: 1,
           assignee: "",
           description: "",
+          progressDone: "",
+          progressCurrent: "",
+          progressBlockers: "",
           createdAt: "",
           priority: "низкий"
       },
@@ -30,6 +36,9 @@ const baseColumns = (): ColumnType[] => [
         id: "p1", text: "Progress 1", columnId: "inprogress", order: 0,
         assignee: "",
         description: "",
+        progressDone: "",
+        progressCurrent: "",
+        progressBlockers: "",
         createdAt: "",
         priority: "низкий"
     }],
@@ -97,6 +106,9 @@ describe("moveTaskBetweenColumns", () => {
               id: "t0", text: "Task 0", columnId: "todo", order: 0,
               assignee: "",
               description: "",
+              progressDone: "",
+              progressCurrent: "",
+              progressBlockers: "",
               createdAt: "",
               priority: "низкий"
           },
@@ -104,6 +116,9 @@ describe("moveTaskBetweenColumns", () => {
               id: "t1", text: "Task 1", columnId: "todo", order: 1,
               assignee: "",
               description: "",
+              progressDone: "",
+              progressCurrent: "",
+              progressBlockers: "",
               createdAt: "",
               priority: "низкий"
           },
@@ -111,6 +126,9 @@ describe("moveTaskBetweenColumns", () => {
               id: "t2", text: "Task 2", columnId: "todo", order: 2,
               assignee: "",
               description: "",
+              progressDone: "",
+              progressCurrent: "",
+              progressBlockers: "",
               createdAt: "",
               priority: "низкий"
           },

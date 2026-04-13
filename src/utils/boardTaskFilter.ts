@@ -39,6 +39,9 @@ export function taskMatchesBoardFilters(task: Task, filters: BoardFiltersValue):
     const hay = [
       task.text,
       task.description,
+      task.progressDone,
+      task.progressCurrent,
+      task.progressBlockers,
       task.source ?? "",
       task.epic ?? "",
       (task.tags ?? []).join(" "),

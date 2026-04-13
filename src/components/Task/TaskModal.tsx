@@ -40,6 +40,9 @@ export const TaskModal = ({
       reporter: task?.reporter || "",
       source: task?.source || "",
       description: task?.description || "",
+      progressDone: task?.progressDone || "",
+      progressCurrent: task?.progressCurrent || "",
+      progressBlockers: task?.progressBlockers || "",
       createdAt:
         task?.createdAt || new Date().toISOString().split("T")[0],
       dueDate: task?.dueDate,
@@ -135,6 +138,10 @@ export const TaskModal = ({
               </div>
               <p><b>Источник:</b> {task.source}</p>
               <p><b>Описание:</b> {task.description}</p>
+              <p className={styles.sectionLabel}>Ход работы (исполнитель)</p>
+              <p><b>Что сделано:</b> {task.progressDone?.trim() ? task.progressDone : "—"}</p>
+              <p><b>Сейчас в работе:</b> {task.progressCurrent?.trim() ? task.progressCurrent : "—"}</p>
+              <p><b>Проблемы и трудности:</b> {task.progressBlockers?.trim() ? task.progressBlockers : "—"}</p>
               <p><b>Создана:</b> {formatDate(task.createdAt)}</p>
               <p><b>Срок:</b> {formatDate(task.dueDate)}</p>
               <p><b>Epic:</b> {task.epic}</p>
@@ -274,6 +281,29 @@ export const TaskModal = ({
               value={form.description}
               onChange={(e) => handleChange("description", e.target.value)}
               placeholder="Описание"
+            />
+
+            <p className={styles.sectionLabel}>Ход работы (исполнитель)</p>
+            <textarea
+              className={styles.textarea}
+              value={form.progressDone}
+              onChange={(e) => handleChange("progressDone", e.target.value)}
+              placeholder="Что уже сделано"
+              rows={3}
+            />
+            <textarea
+              className={styles.textarea}
+              value={form.progressCurrent}
+              onChange={(e) => handleChange("progressCurrent", e.target.value)}
+              placeholder="Над чем сейчас работаю"
+              rows={3}
+            />
+            <textarea
+              className={styles.textarea}
+              value={form.progressBlockers}
+              onChange={(e) => handleChange("progressBlockers", e.target.value)}
+              placeholder="Проблемы, риски, что мешает"
+              rows={3}
             />
 
             <div className={styles.footer}>

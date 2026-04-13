@@ -10,6 +10,12 @@ export type TaskApi = {
   reporter: string;
   source: string;
   description: string;
+  /** Ход работы: что уже сделано (исполнитель). */
+  progressDone: string;
+  /** Ход работы: над чем сейчас работают. */
+  progressCurrent: string;
+  /** Ход работы: проблемы и трудности. */
+  progressBlockers: string;
   epic: string;
   tags: string[];
 
@@ -29,6 +35,9 @@ export type Task = {
   reporter?: string;
   source?: string;
   description: string;
+  progressDone: string;
+  progressCurrent: string;
+  progressBlockers: string;
   epic?: string;
   tags?: string[];
 
