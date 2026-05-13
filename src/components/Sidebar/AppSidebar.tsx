@@ -327,7 +327,7 @@ export const AppSidebar = ({
       <ConfirmModal
         isOpen={Boolean(deleteProjectId)}
         title="Удалить проект?"
-        description={`Проект "${selectedProject?.name ?? ""}" будет удален вместе со всеми задачами и колонками.`}
+        description={`Проект "${selectedProject?.name ?? ""}" будет удалён без возможности восстановления вместе со всеми задачами и колонками.`}
         confirmLabel="Удалить"
         cancelLabel="Отмена"
         onClose={() => setDeleteProjectId(null)}

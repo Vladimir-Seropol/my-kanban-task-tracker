@@ -140,18 +140,44 @@ export const Board = ({ projectId }: BoardProps) => {
         }
 
         const taskId = String(active.id);
-        const fromColumnId = active.data?.current?.columnId;
-        const toColumnId = over.data?.current?.columnId;
-        let toIndex = over.data?.current?.index;
-
-        if (!fromColumnId || !toColumnId) {
+        const dragged = getTask(taskId);
+        if (!dragged) {
             setActiveTask(null);
             return;
         }
 
-        if(toIndex == null) {
-            const column = columnsById[toColumnId];
-            toIndex = column?.taskIds.length ?? 0;
+        const fromColumnId = dragged.columnId;
+        const overId = String(over.id);
+
+        let toColumnId: string;
+        let toIndex: number;
+
+        const overAsColumn = columnsById[overId];
+        if (overAsColumn) {
+            toColumnId = overId;
+            toIndex = overAsColumn.taskIds.length;
+        } else {
+            const overTask = tasksById[overId];
+            if (!overTask) {
+                setActiveTask(null);
+                return;
+            }
+            if (overId === taskId) {
+                setActiveTask(null);
+                return;
+            }
+            toColumnId = overTask.columnId;
+            const targetColumn = columnsById[toColumnId];
+            if (!targetColumn) {
+                setActiveTask(null);
+                return;
+            }
+            const overFullIndex = targetColumn.taskIds.indexOf(overId);
+            if (overFullIndex === -1) {
+                setActiveTask(null);
+                return;
+            }
+            toIndex = overFullIndex;
         }
 
         void moveTask({ taskId, fromColumnId, toColumnId, toIndex }).catch((error) => {
